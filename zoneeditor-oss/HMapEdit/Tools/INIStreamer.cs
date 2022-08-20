@@ -1,3 +1,4 @@
+using HMapEdit.Tools;
 using System.Collections;
 using System.IO;
 
@@ -120,8 +121,8 @@ public class INIStreamer {
     /// <returns></returns>
     public bool ReadIni() {
         string file = m_File;
-        if (System.IO.File.Exists(file)) {
-            StreamReader reader = new StreamReader(file);
+        if (GameData.Exists(file)) {
+            StreamReader reader = new StreamReader(GameData.Open(file));
 
             if (reader == null) return false;
 

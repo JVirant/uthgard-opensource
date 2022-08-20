@@ -1,9 +1,10 @@
+using HMapEdit.Tools;
 using System.IO;
 
 namespace HMapEdit {
     public static class PCXImage {
         public static byte[,] Load(string path) {
-            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
+            Stream s = GameData.Open(path);
             BinaryReader bs = new BinaryReader(s);
 
             bs.ReadBytes(4);

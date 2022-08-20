@@ -1,3 +1,4 @@
+using HMapEdit.Tools;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -308,7 +309,7 @@ namespace HMapEdit.Engine {
         /// </summary>
         public static void Load() {
             string file = Program.ZONE.PATH + @"\sounds.dat";
-            StreamReader r = new StreamReader(file);
+            StreamReader r = new StreamReader(GameData.Open(file));
 
             SoundRegion reg = null;
 

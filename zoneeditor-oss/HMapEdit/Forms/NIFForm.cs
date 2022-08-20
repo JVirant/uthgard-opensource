@@ -71,15 +71,15 @@ namespace HMapEdit {
       foreach (Objects.NIF n in Objects.NIFs.Values)
         used.Add(n.FileName);
 
-      foreach (string file in Directory.GetFiles(folder, "*.jpg", SearchOption.TopDirectoryOnly)) {
+      foreach (string file in GameData.GetFiles(folder, "*.jpg", SearchOption.TopDirectoryOnly)) {
         string nif = Path.GetFileNameWithoutExtension(file);
 
         if (used.Contains(nif))
           continue; //already in use
 
-        if (nonmodel.Checked || Directory.GetFiles(folder, nif + ".obj", SearchOption.AllDirectories).Length > 0 ||
-            Directory.GetFiles(folder, nif + ".bb", SearchOption.AllDirectories).Length > 0) {
-          imgs.Images.Add(Image.FromFile(file));
+        if (nonmodel.Checked || GameData.GetFiles(folder, nif + ".obj", SearchOption.AllDirectories).Length > 0 ||
+            GameData.GetFiles(folder, nif + ".bb", SearchOption.AllDirectories).Length > 0) {
+          imgs.Images.Add(Image.FromStream(GameData.Open(file)));
           items.Add(new ListViewItem(nif, imgs.Images.Count - 1));
         }
       }

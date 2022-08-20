@@ -2,24 +2,24 @@
 
 namespace MNL
 {
-    public class Triangle
-    {
-        public ushort X;
-        public ushort Y;
-        public ushort Z;
+	public struct Triangle
+	{
+		public readonly ushort X;
+		public readonly ushort Y;
+		public readonly ushort Z;
 
-        public Triangle(ushort x, ushort y, ushort z)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-        }
+		public Triangle(ushort x, ushort y, ushort z)
+		{
+			X = x;
+			Y = y;
+			Z = z;
+		}
 
-        public Triangle(BinaryReader reader)
-        {
-            X = reader.ReadUInt16();
-            Y = reader.ReadUInt16();
-            Z = reader.ReadUInt16();
-        }
-    }
+		public Triangle(BinaryReader reader)
+		{
+			X = reader.ReadUInt16();
+			Y = reader.ReadUInt16();
+			Z = reader.ReadUInt16();
+		}
+	}
 }

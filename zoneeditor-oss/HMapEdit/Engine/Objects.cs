@@ -19,9 +19,9 @@ namespace HMapEdit {
     public static int NIFS_Max;
 
     private static string GetFile(string filename) {
-      if (!Directory.Exists(DIR_OBJECTS))
+      if (!GameData.Exists(DIR_OBJECTS))
         return null;
-      string[] res = Directory.GetFiles(DIR_OBJECTS, filename, SearchOption.AllDirectories);
+      string[] res = GameData.GetFiles(DIR_OBJECTS, filename, SearchOption.AllDirectories);
 
       if (res.Length > 0) return res[0];
       return null;
@@ -169,6 +169,7 @@ namespace HMapEdit {
       public Vector3 Position = new Vector3(-128, -128, -128);
       public Vector3 Scale = new Vector3(256, 256, 256);
       public Texture Texture;
+      public OBJModel ObjMesh;
       private int m_Collision = 512;
       private string m_FileName;
       protected string m_Group = "";
@@ -242,17 +243,17 @@ namespace HMapEdit {
 
         if (tex != null) {
           Console.WriteLine("-- Loading Preview Image...");
-          Texture = TextureLoader.FromFile(Program.FORM.renderControl1.DEVICE, tex);
+          Texture = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(tex));
         }
 
         Stream fs = GameData.FindNIF(m_FileName);
         if (fs != null) {
-          Model = new NIFModel(fs);
+          Model = new NIFModel(fs, m_FileName);
         }
 
         if (bb != null) {
           Console.WriteLine("-- Generating BB...");
-          var r = new StreamReader(bb);
+          var r = new StreamReader(GameData.Open(bb));
 
           Position = new Vector3(int.Parse(r.ReadLine()),
                                  int.Parse(r.ReadLine()),
@@ -267,13 +268,13 @@ namespace HMapEdit {
           r.Close();
         }
 
-        /*if (obj != null) {
-                    Console.WriteLine("-- Loading Mesh...");
-                    Model = OBJLoader.Load(obj);
+        //if (obj != null) {
+        //    Console.WriteLine("-- Loading Mesh...");
+        //    ObjMesh = OBJLoader.Load(new StreamReader(GameData.Open(obj)));
 
-                    Console.WriteLine("-- Generating BB...");
-                    OBJLoader.GenerateBounding(obj, this);
-                }*/
+        //    Console.WriteLine("-- Generating BB...");
+        //    OBJLoader.GenerateBounding(obj, this);
+        //}
 
         Console.WriteLine("done (took " + w.ElapsedMilliseconds + "ms)");
       }

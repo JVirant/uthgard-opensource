@@ -142,7 +142,7 @@ namespace HMapEdit {
       private Color m_GridColor = Color.Yellow;
       private int m_GridSize = 1;
       private float m_MouseWheelScroll = 5;
-      private int m_ObjectRenderDistance = 256*212;
+      private int m_ObjectRenderDistance = 256*512;
       protected bool m_Rotate = true;
       private bool m_ShowCursor = true;
       private bool m_ShowFilledPolygons = true;
@@ -151,10 +151,10 @@ namespace HMapEdit {
 
       private bool m_ShowPolygons = true;
       private bool m_ShowZonejumps = true;
-      protected int m_TextureRenderDistance = 256*64;
+      protected int m_TextureRenderDistance = 256*512;
       protected bool m_Textures = true;
-      protected bool m_UseNewRendering;
-      private bool m_UsePatchmaps;
+      protected bool m_UseNewRendering = false;
+      private bool m_UsePatchmaps = true;
 
       [Category("Visibility")]
       public bool ShowHeightmap {

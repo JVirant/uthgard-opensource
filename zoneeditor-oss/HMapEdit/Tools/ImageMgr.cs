@@ -11,7 +11,7 @@ namespace HMapEdit.Tools {
         private static readonly Dictionary<string, string> m_Paths = new Dictionary<string, string>();
 
         static ImageMgr() {
-            foreach (string path in Directory.GetFiles(Objects.DIR_OBJECTS, "*.jpg", SearchOption.AllDirectories)) {
+            foreach (string path in GameData.GetFiles(Objects.DIR_OBJECTS, "*.jpg", SearchOption.AllDirectories)) {
                 string file = path.ToLower();
 
                 while (file.Contains("."))
@@ -28,7 +28,7 @@ namespace HMapEdit.Tools {
         /// <param name="name"></param>
         /// <returns></returns>
         public static Image Get(string name) {
-          if (!File.Exists(name))
+          if (!GameData.Exists(name))
             return null;
 
             string n = name.ToLower();
@@ -38,7 +38,7 @@ namespace HMapEdit.Tools {
 
             if (!m_Images.ContainsKey(n)) {
                 if (m_Paths.ContainsKey(n))
-                    m_Images.Add(n, Image.FromFile(m_Paths[n]));
+                    m_Images.Add(n, Image.FromStream(GameData.Open(m_Paths[n])));
                 else
                     m_Images.Add(n, null);
             }
