@@ -7,9 +7,6 @@ using Microsoft.DirectX.Direct3D;
 using MNL;
 namespace HMapEdit.Tools
 {
-	/// <summary>
-	/// SlimDX Nif Model
-	/// </summary>
 	public class NIFModel
 	{
 		private readonly Texture _objTexture;

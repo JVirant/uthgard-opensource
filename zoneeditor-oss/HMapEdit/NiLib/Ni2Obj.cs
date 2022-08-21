@@ -158,7 +158,7 @@ namespace HMapEdit.NiLib
 				}
 			}
 
-			if (!foundMesh && filter[0] == "pickee")
+			if (!foundMesh && filter.Length > 0 && filter[0] == "pickee")
 			{
 				// no pickee found, use collide
 				Console.WriteLine("Warning: Using collidee!");

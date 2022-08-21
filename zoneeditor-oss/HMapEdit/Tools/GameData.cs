@@ -190,7 +190,21 @@ namespace HMapEdit.Tools
 		public static (Stream, string) FindNIF(string nif)
 		{
 			var files = new[] { nif, Path.Combine(nif.ToLower().Replace(".nif", ".npk"), nif) };
-			return OpenFirst(BuildPathPermutations(GamePaths, NIFFolders, files));
+			var result = OpenFirst(BuildPathPermutations(GamePaths, NIFFolders, files));
+
+			// what's this naming? It seems to be linked to trees
+			if (result.Item1 == null && nif.ToLower().EndsWith("-scl3.nif"))
+				result = FindNIF(nif.Substring(0, nif.Length - 9) + ".nif");
+			if (result.Item1 == null && nif.ToLower().EndsWith("cl3.nif"))
+				result = FindNIF(nif.Substring(0, nif.Length - 7) + ".nif");
+			if (result.Item1 == null && nif.ToLower().EndsWith("-scl5.nif"))
+				result = FindNIF(nif.Substring(0, nif.Length - 9) + ".nif");
+			if (result.Item1 == null && nif.ToLower().EndsWith("cl5.nif"))
+				result = FindNIF(nif.Substring(0, nif.Length - 7) + ".nif");
+			if (result.Item1 == null && !nif.ToLower().StartsWith("bb"))
+				result = FindNIF("B" + nif);
+
+			return result;
 		}
 
 		/// <summary>
@@ -235,6 +249,7 @@ namespace HMapEdit.Tools
 				yield return "newtowns";
 				yield return "frontiers";
 				yield return "phousing";
+				yield return "tutorial";
 				yield return "";
 			}
 		}

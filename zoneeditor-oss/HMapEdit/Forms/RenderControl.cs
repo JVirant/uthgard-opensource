@@ -10,7 +10,6 @@ using HMapEdit.Engine;
 using HMapEdit.Properties;
 using Microsoft.DirectX;
 using Microsoft.DirectX.Direct3D;
-using SlimDevice = SlimDX.Direct3D9.Device;
 
 namespace HMapEdit
 {
