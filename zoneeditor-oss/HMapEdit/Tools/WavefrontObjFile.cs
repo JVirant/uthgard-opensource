@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.IO;
 using MNL;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace CreateOBJ
 {

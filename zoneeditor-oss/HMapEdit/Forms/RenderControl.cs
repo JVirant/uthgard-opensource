@@ -45,6 +45,7 @@ namespace HMapEdit
 		public Texture RED;
 		public Texture REDALPHA;
 		public Effect SHADER;
+		public Effect SHADER_NIF;
 		public Mesh SHAPE_BOX;
 		public Mesh SHAPE_CIRCLE;
 		public Mesh[,] SUBZONES = new Mesh[8, 8];
@@ -298,6 +299,7 @@ namespace HMapEdit
 			var blue = new Bitmap(1, 1);
 			blue.SetPixel(0, 0, Color.Blue);
 			BLUE = new Texture(DEVICE, blue, Usage.None, Pool.Managed);
+			LocalTextures.Set("__BLUE__", BLUE);
 
 			var yellow = new Bitmap(1, 1);
 			yellow.SetPixel(0, 0, Color.Yellow);
@@ -323,6 +325,7 @@ namespace HMapEdit
 			//alph.SetPixel(0, 0, Color.FromArgb(160, Color.White));
 			alph.SetPixel(0, 0, Color.WhiteSmoke);
 			OBJSOLID = new Texture(DEVICE, alph, Usage.None, Pool.Managed);
+			LocalTextures.Set("__OBJSOLID__", OBJSOLID);
 
 			var hc = new Bitmap(1, 1);
 			hc.SetPixel(0, 0, Color.White);
@@ -338,6 +341,14 @@ namespace HMapEdit
 			if (SHADER == null || !string.IsNullOrEmpty(err))
 			{
 				MessageBox.Show(err ?? "shader not found", "Shader Error");
+				Environment.Exit(0);
+			}
+
+			var content = Encoding.Default.GetString(Resources.nif);
+			SHADER_NIF = Effect.FromString(DEVICE, Encoding.Default.GetString(Resources.nif), null, null, ShaderFlags.None, null, out err);
+			if (SHADER_NIF == null || !string.IsNullOrEmpty(err))
+			{
+				MessageBox.Show(err ?? "shader nif.fx not found", "Shader Error");
 				Environment.Exit(0);
 			}
 
@@ -362,9 +373,7 @@ namespace HMapEdit
 			if (Program.Arguments.AntiAlias)
 			{
 				int res, h;
-				if (
-				  !Manager.CheckDeviceMultiSampleType(0, DeviceType.Hardware, f, true, MultiSampleType.NonMaskable, out res,
-													  out h))
+				if (!Manager.CheckDeviceMultiSampleType(0, DeviceType.Hardware, f, true, MultiSampleType.NonMaskable, out res, out h))
 					Program.Arguments.AntiAlias = false;
 				else
 				{
@@ -386,7 +395,7 @@ namespace HMapEdit
 
 		public void Render()
 		{
-			if (DEVICE == null || (!Visible)) return;
+			if (DEVICE == null || SHADER_NIF == null || (!Visible)) return;
 
 			Watch.Start();
 			{
@@ -508,13 +517,9 @@ namespace HMapEdit
 
 				if (Program.CONFIG.ShowObjects)
 				{
-					DEVICE.SetSamplerState(0, SamplerStageStates.MagFilter, (int)TextureFilter.Anisotropic);
-					DEVICE.SetSamplerState(0, SamplerStageStates.MinFilter, (int)TextureFilter.Anisotropic);
-					DEVICE.SetSamplerState(0, SamplerStageStates.MipFilter, (int)TextureFilter.Anisotropic);
-
-					Texture col = Program.CONFIG.ObjectWireColor ? RED : DARKGRAY;
 					lock (Objects.Fixtures)
 					{
+						var fixtures = new List<(Objects.Fixture f, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
 						foreach (Objects.Fixture f in Objects.Fixtures)
 						{
 							double dist = Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
@@ -555,45 +560,76 @@ namespace HMapEdit
 								//}
 							}
 
-							if (hasModel) //.obj model
-							{
-								DEVICE.Transform.World = GetFixtureMatrix(f, false);
+							fixtures.Add((f, hasModel, solid, wire, bb));
+						}
 
-								if (solid)
-								{
-									DEVICE.SetTexture(0, OBJSOLID);
-									f.NIF.Model.Render();
-									if (Program.CONFIG.Objects.AlwaysWireframe)
-										wire = true;
-								}
 
-								if (wire)
-								{
-									DEVICE.SetTexture(0, (f == Program.FORM.CurrentFixture ? BLUE : col));
-									DEVICE.RenderState.FillMode = FillMode.WireFrame;
-									f.NIF.Model.Render();
-									DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-								}
-							}
+						//DEVICE.SamplerState[0].SrgbTexture = true;
+						//DEVICE.SamplerState[0].MagFilter = TextureFilter.Anisotropic;
+						//DEVICE.SamplerState[0].MinFilter = TextureFilter.Anisotropic;
+						//DEVICE.SamplerState[0].MipFilter = TextureFilter.Anisotropic;
+						//DEVICE.SamplerState[0].AddressU = TextureAddress.Wrap;
+						//DEVICE.SamplerState[0].AddressV = TextureAddress.Wrap;
+						//DEVICE.SamplerState[0].AddressW = TextureAddress.Wrap;
 
-							if (bb) //bounding box
-							{
-								DEVICE.Transform.World = GetFixtureMatrix(f, true);
-								DEVICE.SetTexture(0, (f == Program.FORM.CurrentFixture ? BLUE : null));
-								//DEVICE.VertexFormat = CustomVertex.PositionColoredTextured.Format;
+						//DEVICE.TextureState[0].TextureTransform = TextureTransform.Count4 | TextureTransform.Projected;
+						//DEVICE.TextureState[0].TextureCoordinateIndex = (int)TextureCoordinateIndex.CameraSpacePosition;
+						DEVICE.VertexDeclaration = new VertexDeclaration(DEVICE, new VertexElement[] {
+							new VertexElement(
+								0, // short stream
+								0, // short offset
+								DeclarationType.Float3, // DeclarationType declType
+								DeclarationMethod.Default, // DeclarationMethod declMethod
+								DeclarationUsage.Position, // DeclarationUsage declUsage
+								0 // byte usageIndex
+							),
+							new VertexElement(
+								1,
+								0,
+								DeclarationType.Float2,
+								DeclarationMethod.Default,
+								DeclarationUsage.TextureCoordinate,
+								0
+							),
+							VertexElement.VertexDeclarationEnd
+						});
 
-								DEVICE.RenderState.FillMode = FillMode.WireFrame;
-								//Cull prev = DEVICE.RenderState.CullMode;
-								//DEVICE.RenderState.CullMode = Cull.Clockwise; //needed because of alpha
-								//DEVICE.DrawUserPrimitives(PrimitiveType.TriangleList, BOX.Length/3, BOX);
-								_BOX.DrawSubset(0);
-								//DEVICE.RenderState.CullMode = prev;
-								DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+						SHADER_NIF.Begin(FX.None);
+						SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
+						SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
+						foreach (var t in fixtures.Where(f => f.hasModel && f.solid)) //.obj model
+						{
+							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
+							t.f.NIF.Model.Render(DEVICE, SHADER_NIF);
+						}
+						SHADER_NIF.End();
 
-								//DEVICE.SetTexture(0, null);
-								//DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-								//DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 3, ARROW);
-							}
+						foreach (var t in fixtures.Where(f => f.hasModel && (Program.CONFIG.Objects.AlwaysWireframe || f.wire)))
+						{
+							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
+							Texture col = Program.CONFIG.ObjectWireColor ? Program.FORM.renderControl1.RED : Program.FORM.renderControl1.DARKGRAY;
+							col = (t.f == Program.FORM.CurrentFixture ? Program.FORM.renderControl1.BLUE : col);
+							DEVICE.SetTexture(0, col);
+							t.f.NIF.Model.RenderWireframe(DEVICE);
+						}
+
+						foreach (var t in fixtures.Where(f => f.bb)) //bounding box
+						{
+							DEVICE.Transform.World = GetFixtureMatrix(t.f, true);
+							DEVICE.SetTexture(0, (t.f == Program.FORM.CurrentFixture ? BLUE : null));
+							//DEVICE.VertexFormat = CustomVertex.PositionColoredTextured.Format;
+
+							DEVICE.RenderState.FillMode = FillMode.WireFrame;
+							//Cull prev = DEVICE.RenderState.CullMode;
+							//DEVICE.RenderState.CullMode = Cull.Clockwise; //needed because of alpha
+							//DEVICE.DrawUserPrimitives(PrimitiveType.TriangleList, BOX.Length/3, BOX);
+							_BOX.DrawSubset(0);
+							//DEVICE.RenderState.CullMode = prev;
+							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+
+							//DEVICE.SetTexture(0, null);
+							//DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+							//DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 3, ARROW);
 						}
 					}
 				}

@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace MNL
 {
@@ -7,7 +7,7 @@ namespace MNL
     {
         public ushort Flags;
         public float Depth;
-        public Color3 Color;
+        public Vector3 Color;
 
         public NiFogProperty(NiFile file, BinaryReader reader) : base(file, reader)
         {

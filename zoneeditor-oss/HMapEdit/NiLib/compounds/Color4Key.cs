@@ -1,15 +1,15 @@
 ﻿using System;
 using System.IO;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace MNL
 {
     public class Color4Key : BaseKey
     {
         public float Time = 0f;
-        public Color4 Value;
-        public Color4 Forward;
-        public Color4 Backward;
+        public Vector4 Value;
+        public Vector4 Forward;
+        public Vector4 Backward;
 
         public Color4Key(BinaryReader reader, eKeyType type) : base(reader, type)
         {

@@ -1,5 +1,5 @@
-﻿using System.IO;
-using SlimDX;
+﻿using Microsoft.DirectX;
+using System.IO;
 
 namespace MNL
 {
@@ -47,31 +47,40 @@ namespace MNL
             return new Vector4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static Color3 ReadColor3(this BinaryReader reader)
+        public static Vector3 ReadColor3(this BinaryReader reader)
         {
-            return new Color3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+            return new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static Color4 ReadColor4(this BinaryReader reader)
+        public static Vector4 ReadColor4(this BinaryReader reader)
         {
-            return new Color4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+            return new Vector4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static Color4 ReadColor4Byte(this BinaryReader reader)
+        public static Vector4 ReadColor4Byte(this BinaryReader reader)
         {
-            return new Color4(reader.ReadByte() / 255f, reader.ReadByte() / 255f, reader.ReadByte() / 255f, reader.ReadByte() / 255f);
+            return new Vector4(reader.ReadByte() / 255f, reader.ReadByte() / 255f, reader.ReadByte() / 255f, reader.ReadByte() / 255f);
         }
 
         public static Matrix ReadMatrix33(this BinaryReader reader)
         {
             var result = Matrix.Identity;
-            for (var y = 0; y < 3; y++)
-            {
-                for (var x = 0; x < 3; x++)
-                {
-                    result[x, y] = reader.ReadSingle();
-                }
-            }
+            result.M11 = reader.ReadSingle();
+            result.M21 = reader.ReadSingle();
+            result.M31 = reader.ReadSingle();
+            // result.M41 = reader.ReadSingle();
+            result.M12 = reader.ReadSingle();
+            result.M22 = reader.ReadSingle();
+            result.M32 = reader.ReadSingle();
+            // result.M42 = reader.ReadSingle();
+            result.M13 = reader.ReadSingle();
+            result.M23 = reader.ReadSingle();
+            result.M33 = reader.ReadSingle();
+            // result.M43 = reader.ReadSingle();
+            //result.M14 = reader.ReadSingle();
+            //result.M24 = reader.ReadSingle();
+            //result.M34 = reader.ReadSingle();
+            //result.M44 = reader.ReadSingle();
             return result;
         }
     }

@@ -246,9 +246,9 @@ namespace HMapEdit {
           Texture = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(tex));
         }
 
-        Stream fs = GameData.FindNIF(m_FileName);
+        var (fs, path) = GameData.FindNIF(m_FileName);
         if (fs != null) {
-          Model = new NIFModel(fs, m_FileName);
+          Model = new NIFModel(fs, path);
         }
 
         if (bb != null) {

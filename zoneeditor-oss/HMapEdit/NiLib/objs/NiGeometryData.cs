@@ -1,5 +1,5 @@
-﻿using System.IO;
-using SlimDX;
+﻿using Microsoft.DirectX;
+using System.IO;
 
 namespace MNL
 {
@@ -18,7 +18,7 @@ namespace MNL
 		public ushort ConsistencyFlags;
 		public Vector3 Center;
 		public float Radius;
-		public Color4[] VertexColors;
+		public Vector4[] VertexColors;
 		public Vector2[][] UVSets;
 		public uint AdditionalDataID;
 		public Vector3[] Binormals;
@@ -89,7 +89,7 @@ namespace MNL
 			HasVertexColors = reader.ReadBoolean();
 			if (HasVertexColors)
 			{
-				VertexColors = new Color4[NumVertices];
+				VertexColors = new Vector4[NumVertices];
 				for (var i = 0; i < NumVertices; i++)
 					VertexColors[i] = reader.ReadColor4();
 			}

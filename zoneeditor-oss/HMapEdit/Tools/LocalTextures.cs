@@ -13,12 +13,19 @@ namespace HMapEdit
 	{
 		private static readonly Dictionary<string, Texture> m_Textures = new Dictionary<string, Texture>();
 
+		public static void Set(string file, Texture texture)
+		{
+			if (m_Textures.ContainsKey(file))
+				return;
+			m_Textures.Add(file, texture);
+		}
+
 		/// <summary>
 		/// Retrieves a Texture
 		/// </summary>
 		/// <param name="file"></param>
 		/// <returns></returns>
-		public static Texture Get(string file, bool noAlt)
+		public static Texture Get(string file, bool noAlt, bool searchEverywhere = false)
 		{
 			if (file == "empty")
 				return null; //simply.. nothing
@@ -43,12 +50,32 @@ namespace HMapEdit
 					else
 						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f));
 					m_Textures.Add(n, t);
+					return m_Textures[n]; //loaded
 				}
-				else
+
+				if (searchEverywhere)
 				{
-					m_Textures.Add(n, Program.FORM.renderControl1.OBJSOLID);
-					Console.WriteLine("Missing Texture: " + file);
+					var (stream, path) = GameData.FindTex(file);
+					if (stream != null)
+					{
+						m_Textures.Add(n, TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, stream));
+						return m_Textures[n]; //loaded
+					}
+					if (file.EndsWith(".tga"))
+					{
+						var (stream2, _) = GameData.FindTex(file.Substring(0, file.Length - 3) + "dds");
+						if (stream2 != null)
+						{
+							m_Textures.Add(n, TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, stream2));
+							return m_Textures[n]; //loaded
+						}
+					}
+					if (noAlt)
+						return null;
 				}
+
+				m_Textures.Add(n, Program.FORM.renderControl1.OBJSOLID);
+				Console.WriteLine("Missing Texture: " + file);
 			}
 
 			return m_Textures[n]; //loaded

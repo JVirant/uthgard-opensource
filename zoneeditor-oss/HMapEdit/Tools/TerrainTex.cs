@@ -21,10 +21,10 @@ namespace HMapEdit {
 
       //Otherwise: Try to load
       if (!m_Textures.ContainsKey(n)) {
-        Stream fs = GameData.FindTerrainTex(file);
+        var (fs, path) = GameData.FindTerrainTex(file);
 
         if (fs != null) {
-          Console.WriteLine("Loading Texture " + n);
+          Console.WriteLine("Loading Texture " + path);
           Texture t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, fs);
           m_Textures.Add(n, t);
         }

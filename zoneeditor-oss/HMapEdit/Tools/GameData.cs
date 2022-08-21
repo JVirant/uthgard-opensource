@@ -16,7 +16,12 @@ namespace HMapEdit.Tools
 		/// </summary>
 		private static string GamePath
 		{
-			get { return Program.Arguments.GameDirectory; }
+			get { return Path.GetFullPath(Program.Arguments.GameDirectory); }
+		}
+
+		private static string ExtractPath
+		{
+			get { return Path.Combine(Environment.CurrentDirectory, "extracted");  }
 		}
 
 		/// <summary>
@@ -48,6 +53,19 @@ namespace HMapEdit.Tools
 		{
 			if (GamePath == null)
 				return null;
+			if (File.Exists(file))
+			{
+				if (Program.CONFIG.ExtractLoadedAssets)
+				{
+					var dest = CombineRelative(ExtractPath, file.ToLower().Replace(GamePath.ToLower(), ""));
+					if (!File.Exists(dest))
+					{
+						Directory.CreateDirectory(Path.GetDirectoryName(dest));
+						File.Copy(file, dest);
+					}
+				}
+				return new FileStream(file, FileMode.Open, FileAccess.Read);
+			}
 
 			string curPath = GamePath;
 			string[] components = file.ToLower().Split('\\');
@@ -74,7 +92,30 @@ namespace HMapEdit.Tools
 			{
 				var mpk = TinyMPK.FromFile(curPath);
 				var subfile = mpk.GetFile(nifComponent);
-				return subfile == null ? null : new MemoryStream(subfile.Data);
+				if (subfile == null)
+					return null;
+
+				var ms = new MemoryStream(subfile.Data);
+				if (Program.CONFIG.ExtractLoadedAssets)
+				{
+					var dest = CombineRelative(ExtractPath, curPath.ToLower().Replace(GamePath.ToLower(), ""), nifComponent);
+					if (!File.Exists(dest))
+					{
+						Directory.CreateDirectory(Path.GetDirectoryName(dest));
+						File.WriteAllBytes(dest, ms.ToArray());
+						ms.Position = 0;
+					}
+				}
+				return ms;
+			}
+			if (Program.CONFIG.ExtractLoadedAssets)
+			{
+				var dest = CombineRelative(ExtractPath, curPath.ToLower().Replace(GamePath.ToLower(), ""));
+				if (!File.Exists(dest))
+				{
+					Directory.CreateDirectory(Path.GetDirectoryName(dest));
+					File.Copy(curPath, dest);
+				}
 			}
 			return new FileStream(curPath, FileMode.Open, FileAccess.Read);
 		}
@@ -84,14 +125,14 @@ namespace HMapEdit.Tools
 		/// </summary>
 		/// <param name="files"></param>
 		/// <returns></returns>
-		public static Stream OpenFirst(IEnumerable<string> files)
+		public static (Stream, string) OpenFirst(IEnumerable<string> files)
 		{
 			foreach (string file in files)
 			{
 				if (Exists(file))
-					return Open(file);
+					return (Open(file), file);
 			}
-			return null;
+			return (null, null);
 		}
 
 		public static string[] GetFiles(string path, string pattern, SearchOption option = SearchOption.TopDirectoryOnly)
@@ -146,7 +187,7 @@ namespace HMapEdit.Tools
 		/// </summary>
 		/// <param name="nif"></param>
 		/// <returns></returns>
-		public static Stream FindNIF(string nif)
+		public static (Stream, string) FindNIF(string nif)
 		{
 			var files = new[] { nif, Path.Combine(nif.ToLower().Replace(".nif", ".npk"), nif) };
 			return OpenFirst(BuildPathPermutations(GamePaths, NIFFolders, files));
@@ -157,9 +198,16 @@ namespace HMapEdit.Tools
 		/// </summary>
 		/// <param name="tex"></param>
 		/// <returns></returns>
-		public static Stream FindTerrainTex(string tex)
+		public static (Stream, string) FindTerrainTex(string tex)
 		{
 			return OpenFirst(BuildPathPermutations(GamePaths, TerrainTexFolders, new[] { tex }));
+		}
+
+		public static (Stream, string) FindTex(string tex, params string[] paths)
+		{
+			if (paths.Length > 0)
+				return OpenFirst(BuildPathPermutations(GamePaths, paths, new[] { tex }));
+			return OpenFirst(BuildPathPermutations(GamePaths, NIFFolders, new[] { tex }));
 		}
 
 		/// <summary>
@@ -247,5 +295,12 @@ namespace HMapEdit.Tools
 			}
 		}
 		#endregion
+
+		private static string CombineRelative(string path, params string[] subpaths)
+		{
+			foreach (var subpath in subpaths)
+				path = Path.Combine(path, subpath[0] == '/' || subpath[0] == '\\' ? subpath.Substring(1) : subpath);
+			return path;
+		}
 	}
 }

@@ -5,6 +5,7 @@ namespace MNL
     public class NiTriShapeData : NiTriBasedGeomData
     {
         public uint NumTrianglePoints;
+        public ushort[] Points;
         public bool HasTriangles;
         public Triangle[] Triangles;
         public ushort[][] MatchGroups;
@@ -21,9 +22,13 @@ namespace MNL
                 || (HasTriangles || Version >= eNifVersion.VER_10_0_1_3))
             {
                 Triangles = new Triangle[NumTriangles];
+                Points = new ushort[NumTriangles * 3];
                 for (var i = 0; i < NumTriangles; i++)
                 {
                     Triangles[i] = new Triangle(reader);
+                    Points[i * 3 + 0] = Triangles[i].X;
+                    Points[i * 3 + 1] = Triangles[i].Y;
+                    Points[i * 3 + 2] = Triangles[i].Z;
                 }
             }
 

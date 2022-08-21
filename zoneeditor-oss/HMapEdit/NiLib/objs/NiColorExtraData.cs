@@ -1,11 +1,11 @@
 ﻿using System.IO;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace MNL
 {
     public class NiColorExtraData : NiExtraData
     {
-        public Color4 Data;
+        public Vector4 Data;
 
         public NiColorExtraData(NiFile file, BinaryReader reader)
             : base(file, reader)

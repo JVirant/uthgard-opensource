@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace MNL
 {
@@ -13,7 +13,7 @@ namespace MNL
         public float HorizontalDirection = 0;
         public float HorizontalAngle = 0;
         public Vector3 UnkownNormal;
-        public Color4 UnkownColor;
+        public Vector4 UnkownColor;
         public float Size = 0;
         public float EmitStartTime = 0;
         public float EmitStopTime = 0;

@@ -409,6 +409,13 @@ namespace HMapEdit
 								fix.AxisY = float.Parse(s[17], info);
 								fix.AxisZ = float.Parse(s[18], info);
 							}
+							else // use A (angle)
+							{
+								fix.Rotation = float.Parse(s[6], info) / -180 * (float)Math.PI;
+								fix.AxisX = 0;
+								fix.AxisY = 0;
+								fix.AxisZ = 1;
+							}
 
 							Objects.Fixtures.Add(fix);
 

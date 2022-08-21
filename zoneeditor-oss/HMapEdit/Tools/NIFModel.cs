@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using HMapEdit.NiLib;
 using Microsoft.DirectX;
+using Microsoft.DirectX.Direct3D;
 using MNL;
 namespace HMapEdit.Tools
 {
@@ -11,7 +12,9 @@ namespace HMapEdit.Tools
 	/// </summary>
 	public class NIFModel
 	{
+		private readonly Texture _objTexture;
 		private readonly OBJModel _objModel;
+		private readonly NiFile _niFile;
 
 		/// <summary>
 		/// Loads a nif model
@@ -19,12 +22,12 @@ namespace HMapEdit.Tools
 		/// <param name="nif"></param>
 		public NIFModel(Stream nif, string filename)
 		{
-			NiFile nifile;
+			_objTexture = LocalTextures.Get("__OBJSOLID__", false);
 			using (var r = new BinaryReader(nif))
 			{
-				nifile = new NiFile(r);
+				_niFile = new NiFile(r, filename);
 			}
-			var obj = Ni2Obj.ToObj(nifile);
+			var obj = Ni2Obj.ToObj(_niFile);
 			using (var ms = new MemoryStream())
 			{
 				obj.Save(new StreamWriter(ms));
@@ -42,10 +45,23 @@ namespace HMapEdit.Tools
 		/// <summary>
 		/// Renders the model
 		/// </summary>
-		public void Render()
+		public void Render(Device device, Effect effect)
 		{
+			if (device != null && Program.CONFIG.ShowRawNIFs && _niFile != null)
+				_niFile.Render(device, effect);
+			else if (_objModel != null)
+			{
+				device.SetTexture(0, _objTexture);
+				_objModel.Render();
+			}
+		}
+
+		public void RenderWireframe(Device device)
+		{
+			device.RenderState.FillMode = FillMode.WireFrame;
 			if (_objModel != null)
 				_objModel.Render();
+			device.RenderState.FillMode = Program.CONFIG.FillMode;
 		}
 
 		/// <summary>

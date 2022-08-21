@@ -1,5 +1,5 @@
-﻿using System.IO;
-using SlimDX;
+﻿using Microsoft.DirectX;
+using System.IO;
 
 namespace MNL
 {

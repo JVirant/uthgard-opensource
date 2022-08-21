@@ -1,15 +1,15 @@
 ﻿using System.IO;
-using SlimDX;
+using Microsoft.DirectX;
 
 namespace MNL
 {
     public class NiMaterialProperty : NiProperty
     {
         public ushort Flags;
-        public Color3 AmbientColor;
-        public Color3 DiffuseColor;
-        public Color3 SpecularColor;
-        public Color3 EmissiveColor;
+        public Vector3 AmbientColor;
+        public Vector3 DiffuseColor;
+        public Vector3 SpecularColor;
+        public Vector3 EmissiveColor;
         public float Glossiness;
         public float Alpha;
 
