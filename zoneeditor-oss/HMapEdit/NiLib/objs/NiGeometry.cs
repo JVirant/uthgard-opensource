@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.DirectX.Direct3D;
+using System;
 using System.IO;
 
 namespace MNL
@@ -59,6 +60,23 @@ namespace MNL
 			{
 				throw new Exception("unspported data");
 			}
+		}
+
+		public override void DxInit(Device device)
+		{
+			base.DxInit(device);
+			if (Data.IsValid())
+				Data.Object.DxInit(device);
+			if (SkinInstance.IsValid())
+				SkinInstance.Object.DxInit(device);
+		}
+		public override void Render(Device device)
+		{
+			base.Render(device);
+			if (Data.IsValid())
+				Data.Object.Render(device);
+			if (SkinInstance.IsValid())
+				SkinInstance.Object.Render(device);
 		}
 	}
 }

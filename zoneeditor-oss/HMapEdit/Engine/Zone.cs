@@ -33,6 +33,9 @@ namespace HMapEdit
 			if (BUSY)
 				return;
 
+#if DEBUG
+			InternalLoadZone(path);
+#else
 			BUSY = true;
 			var w = new BackgroundWorker();
 			w.DoWork += delegate
@@ -48,6 +51,7 @@ namespace HMapEdit
 				}
 			};
 			w.RunWorkerAsync();
+#endif
 		}
 
 		private void LoadSectorDat(string path)
@@ -105,7 +109,7 @@ namespace HMapEdit
 			string p = string.Format("dat{0}.mpk", ZoneID.ToString("D3"));
 			string pp = path + "\\" + p;
 
-			#region terrain.pcx/offset.pcx
+#region terrain.pcx/offset.pcx
 
 			{
 				Loading.Update(p + "... - Heightmaps");
@@ -124,7 +128,7 @@ namespace HMapEdit
 				Program.FORM.renderControl1.CreateZone();
 			}
 
-			#endregion
+#endregion
 		}
 
 		private void LoadBoundings(string path)
@@ -178,7 +182,7 @@ namespace HMapEdit
 				z.LoadHeightmap(path);
 				z.LoadBoundings(path);
 
-				#region zonejump.csv
+#region zonejump.csv
 
 				{
 					Loading.Update(p + "... - Zonejumps");
@@ -208,9 +212,9 @@ namespace HMapEdit
 					}
 				}
 
-				#endregion
+#endregion
 
-				#region lights.csv
+#region lights.csv
 
 				{
 					Loading.Update(p + "... - Lights");
@@ -247,12 +251,12 @@ namespace HMapEdit
 					}
 				}
 
-				#endregion
+#endregion
 
 				Loading.Update("Loading patchmaps ...");
 				Program.CONFIG.UsePatchmaps = true;
 
-				#region texXXX.mpk
+#region texXXX.mpk
 
 				{
 					string px = string.Format("tex{0}.mpk", z.ZoneID.ToString("D3"));
@@ -303,7 +307,7 @@ namespace HMapEdit
 					z.TextureMap = m;
 				}
 
-				#endregion
+#endregion
 
 				var info = (NumberFormatInfo)NumberFormatInfo.CurrentInfo.Clone();
 				info.NumberDecimalSeparator = ".";
@@ -311,7 +315,7 @@ namespace HMapEdit
 				Loading.Update("Loading Sounds..");
 				SoundMgr.Load();
 
-				#region nifs.csv
+#region nifs.csv
 
 				lock (Objects.NIFs)
 				{
@@ -360,9 +364,9 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
-				#region fixtures.csv
+#region fixtures.csv
 
 				lock (Objects.Fixtures)
 				{
@@ -428,7 +432,7 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
 				{
 					int total = Objects.NIFs.Values.Count;
@@ -489,7 +493,7 @@ namespace HMapEdit
 			if (!Directory.Exists(path))
 				Directory.CreateDirectory(path);
 
-			#region datXXX.mpk
+#region datXXX.mpk
 
 			int bwillow = 0;
 			{
@@ -499,7 +503,7 @@ namespace HMapEdit
 
 				if (!Directory.Exists(pp)) Directory.CreateDirectory(pp);
 
-				#region SECTOR.DAT
+#region SECTOR.DAT
 
 				{
 					Loading.Update("Saving " + p + "... - sector.dat");
@@ -561,9 +565,9 @@ namespace HMapEdit
 					s.WriteIni();
 				}
 
-				#endregion
+#endregion
 
-				#region terrain.pcx/offset.pcx
+#region terrain.pcx/offset.pcx
 
 				{
 					Loading.Update("Saving " + p + "... - Heightmaps");
@@ -594,9 +598,9 @@ namespace HMapEdit
 					PCXImage.Save(string.Format("{0}\\offset.pcx", pp), offset);
 				}
 
-				#endregion
+#endregion
 
-				#region bound.csv
+#region bound.csv
 
 				{
 					Loading.Update("Saving " + p + "... - Bounds");
@@ -619,9 +623,9 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
-				#region water.pcx
+#region water.pcx
 
 				{
 					Loading.Update("Saving " + p + "... - Water");
@@ -681,9 +685,9 @@ namespace HMapEdit
 					PCXImage.Save(string.Format("{0}\\water.pcx", pp), data);
 				}
 
-				#endregion
+#endregion
 
-				#region nifs.csv
+#region nifs.csv
 
 				{
 					Loading.Update("Saving " + p + "... - NIFs");
@@ -738,9 +742,9 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
-				#region fixtures.csv
+#region fixtures.csv
 
 				{
 					Loading.Update("Saving " + p + "... - Fixtures");
@@ -805,9 +809,9 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
-				#region zonejump.csv
+#region zonejump.csv
 
 				{
 					Loading.Update("Saving " + p + "... - Zonejumps");
@@ -836,9 +840,9 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 
-				#region lights.csv
+#region lights.csv
 
 				{
 					Loading.Update("Saving " + p + "... - Lights");
@@ -861,12 +865,12 @@ namespace HMapEdit
 					rs.Close();
 				}
 
-				#endregion
+#endregion
 			}
 
-			#endregion
+#endregion
 
-			#region terXXX.mpk
+#region terXXX.mpk
 
 			{
 				string p = string.Format("ter{0}.mpk", ZoneID.ToString("D3"));
@@ -878,7 +882,7 @@ namespace HMapEdit
 				PatchMap.Save(pp + "\\", backup);
 			}
 
-			#endregion
+#endregion
 
 			Loading.Update("Saving Sounds...");
 			SoundMgr.Save(path);

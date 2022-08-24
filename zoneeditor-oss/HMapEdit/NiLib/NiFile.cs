@@ -155,16 +155,22 @@ namespace MNL
 			}
 		}
 
+		private bool _rootFound = false;
+		private NiAVObject _root = null;
 		public NiAVObject FindRoot()
 		{
-			var avObj = ObjectsByRef.Values.OfType<NiAVObject>().Select(obj => obj).FirstOrDefault();
+			if (_rootFound)
+				return _root;
+			_rootFound = true;
 
+			var avObj = ObjectsByRef.Values.OfType<NiAVObject>().Select(obj => obj).FirstOrDefault();
 			if (avObj == null)
 				return null;
 
 			while (avObj.Parent != null)
 				avObj = avObj.Parent;
 
+			_root = avObj;
 			return avObj;
 		}
 
@@ -202,38 +208,29 @@ namespace MNL
 			}
 		}
 
+		private bool _dxInitDone = false;
+		public void DxInit(Device device)
+		{
+			if (_dxInitDone)
+				return;
+			var node = FindRoot();
+			if (node != null)
+				node.DxInit(device);
+			_dxInitDone = true;
+		}
 		public void Render(Device device, Effect effect)
 		{
 			var node = FindRoot() as NiNode;
 			if (node != null)
 				_Render(device, effect, node, Matrix.Identity);
 		}
+
+		private static EffectHandle _handleWorld = EffectHandle.FromString("World");
 		private void _Render(Device device, Effect effect, NiAVObject obj, Matrix modelMatrix)
 		{
 			// TODO filter correctly
 			if (obj.Name.Value.ToLower() == "collidee")
 				return;
-
-			foreach (var prop in obj.Properties) // TODO other indexes
-			{
-				if (prop.Object is NiTexturingProperty tex)
-				{
-					Texture texture = null;
-					if (tex.DetailTexture?.Source != null && tex.DetailTexture.Source.IsValid())
-					{
-						tex.DetailTexture.Source.SetRef(this);
-						texture = LocalTextures.Get(tex.DetailTexture.Source.Object.FileName.Value, true, true);
-					}
-					if (texture == null && tex.BaseTexture?.Source != null && tex.BaseTexture.Source.IsValid())
-					{
-						tex.BaseTexture.Source.SetRef(this);
-						texture = LocalTextures.Get(tex.BaseTexture.Source.Object.FileName.Value, false, true);
-					}
-
-					if (texture != null)
-						device.SetTexture(0, texture);
-				}
-			}
 
 			modelMatrix = Matrix.Translation(obj.Translation.X, obj.Translation.Y, obj.Translation.Z) * modelMatrix;
 			modelMatrix = Matrix.Scaling(obj.Scale, obj.Scale, obj.Scale) * modelMatrix;
@@ -242,78 +239,38 @@ namespace MNL
 			var mode = _FindDrawMode(obj);
 			var oldMode = device.RenderState.CullMode;
 			device.RenderState.CullMode = mode == eFaceDrawMode.DRAW_CCW ? Cull.CounterClockwise : (mode == eFaceDrawMode.DRAW_CW ? Cull.Clockwise : Cull.None);
-			if (obj is NiTriStrips strips && strips.Data.Object is NiTriStripsData stripsData)
+			if (obj is NiTriShape || obj  is NiTriStrips)
 			{
-				var vb = new VertexBuffer(typeof(Vector3), stripsData.Vertices.Length, device, Usage.None, VertexFormats.Position, Pool.Managed);
-				vb.SetData(stripsData.Vertices, 0, LockFlags.Discard);
-				device.SetStreamSource(0, vb, 0);
-				if (stripsData.UVSets.Length > 0)
+				foreach (var prop in obj.Properties)
 				{
-					var ub = new VertexBuffer(typeof(Vector2), stripsData.UVSets[0].Length, device, Usage.None, VertexFormats.Texture0, Pool.Managed);
-					ub.SetData(stripsData.UVSets[0], 0, LockFlags.Discard);
-					device.SetStreamSource(1, ub, 0);
+					if (prop.Object is NiTexturingProperty tex)
+					{
+						// TODO review this part, it's not ok: UVSetIndex is not the "sampler idx"
+						if (tex.BaseTexture?.Source != null && tex.BaseTexture.Source.IsValid())
+						{
+							tex.BaseTexture.Source.SetRef(this);
+							var texture = LocalTextures.Get(tex.BaseTexture.Source.Object.FileName.Value, false, true);
+							device.SetTexture((int)tex.BaseTexture.UVSetIndex, texture);
+						}
+						if (tex.DetailTexture?.Source != null && tex.DetailTexture.Source.IsValid())
+						{
+							tex.DetailTexture.Source.SetRef(this);
+							var texture = LocalTextures.Get(tex.DetailTexture.Source.Object.FileName.Value, true, true);
+							device.SetTexture((int)tex.DetailTexture.UVSetIndex, texture);
+						}
+						if (tex.DarkTexture?.Source != null && tex.DarkTexture.Source.IsValid())
+						{
+							tex.DarkTexture.Source.SetRef(this);
+							var texture = LocalTextures.Get(tex.DarkTexture.Source.Object.FileName.Value, true, true);
+							device.SetTexture((int)tex.DarkTexture.UVSetIndex, texture);
+						}
+					}
 				}
 
-				var oldWorld = device.Transform.World;
-				// device.Transform.World = modelMatrix * device.Transform.World;
-				effect.SetValue(EffectHandle.FromString("World"), modelMatrix * device.Transform.World);
+				effect.SetValue(_handleWorld, modelMatrix * device.Transform.World);
 				effect.BeginPass(0);
-				foreach (var points in stripsData.Points)
-				{
-					var ib = new IndexBuffer(typeof(ushort), points.Length, device, Usage.None, Pool.Managed);
-					ib.SetData(points, 0, LockFlags.Discard);
-					device.Indices = ib;
-
-					device.DrawIndexedPrimitives(PrimitiveType.TriangleStrip, 0, 0, (int)stripsData.NumVertices, 0, points.Length - 2);
-				}
+				obj.Render(device);
 				effect.EndPass();
-				// device.Transform.World = oldWorld;
-			}
-			if (obj is NiTriShape shape && shape.Data.Object is NiTriShapeData shapeData)
-			{
-				var vb = new VertexBuffer(typeof(Vector3), shapeData.Vertices.Length, device, Usage.None, VertexFormats.Position, Pool.Default);
-				vb.SetData(shapeData.Vertices, 0, LockFlags.Discard);
-				device.SetStreamSource(0, vb, 0);
-
-				VertexBuffer uvs = null;
-				VertexBuffer normals = null;
-				if (shapeData.UVSets.Length > 0)
-				{
-					uvs = new VertexBuffer(typeof(Vector2), shapeData.UVSets[0].Length, device, Usage.WriteOnly, VertexFormats.Texture0, Pool.Default);
-					uvs.SetData(shapeData.UVSets[0], 0, LockFlags.Discard);
-					device.SetStreamSource(1, uvs, 0);
-				}
-				if ((shapeData.Normals?.Length ?? 0) > 0)
-				{
-					normals = new VertexBuffer(typeof(Vector3), shapeData.Normals.Length, device, Usage.None, VertexFormats.Normal, Pool.Default);
-					normals.SetData(shapeData.Normals, 0, LockFlags.Discard);
-					device.SetStreamSource(2, normals, 0);
-				}
-
-				var ib = new IndexBuffer(typeof(ushort), shapeData.Points.Length, device, Usage.None, Pool.Default);
-				ib.SetData(shapeData.Points, 0, LockFlags.Discard);
-				device.Indices = ib;
-
-				//var oldWorld = device.Transform.World;
-				//var oldTex0 = device.Transform.Texture0;
-				//device.Transform.World = modelMatrix * device.Transform.World;
-				//device.Transform.Texture0 = modelMatrix * device.Transform.Projection;
-
-				effect.SetValue(EffectHandle.FromString("World"), modelMatrix * device.Transform.World);
-				effect.BeginPass(0);
-				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, (int)shapeData.NumVertices, 0, shapeData.Triangles.Length);
-				effect.EndPass();
-
-
-				//device.Transform.World = oldWorld;
-				//device.Transform.Texture0 = oldTex0;
-
-				vb.Dispose();
-				if (uvs != null)
-					uvs.Dispose();
-				if (normals != null)
-					normals.Dispose();
-				ib.Dispose();
 			}
 			device.RenderState.CullMode = oldMode;
 

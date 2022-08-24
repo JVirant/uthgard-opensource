@@ -98,7 +98,8 @@ namespace HMapEdit.Tools
 				var ms = new MemoryStream(subfile.Data);
 				if (Program.CONFIG.ExtractLoadedAssets)
 				{
-					var dest = CombineRelative(ExtractPath, curPath.ToLower().Replace(GamePath.ToLower(), ""), nifComponent);
+					var root = curPath.EndsWith(".npk") ? Path.GetDirectoryName(curPath) : curPath;
+					var dest = CombineRelative(ExtractPath, root.ToLower().Replace(GamePath.ToLower(), ""), nifComponent);
 					if (!File.Exists(dest))
 					{
 						Directory.CreateDirectory(Path.GetDirectoryName(dest));
@@ -313,7 +314,7 @@ namespace HMapEdit.Tools
 
 		private static string CombineRelative(string path, params string[] subpaths)
 		{
-			foreach (var subpath in subpaths)
+			foreach (var subpath in subpaths.Where(sp => !String.IsNullOrWhiteSpace(sp)))
 				path = Path.Combine(path, subpath[0] == '/' || subpath[0] == '\\' ? subpath.Substring(1) : subpath);
 			return path;
 		}

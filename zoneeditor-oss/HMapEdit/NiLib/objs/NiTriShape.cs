@@ -2,12 +2,12 @@
 
 namespace MNL
 {
-    public class NiTriShape : NiTriBasedGeometry
-    {
-        public NiTriShape(NiFile file, BinaryReader reader)
-            : base(file, reader)
-        {
+	public class NiTriShape : NiTriBasedGeometry
+	{
+		public NiTriShape(NiFile file, BinaryReader reader)
+			: base(file, reader)
+		{
 
-        }
-    }
+		}
+	}
 }

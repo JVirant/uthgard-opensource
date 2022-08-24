@@ -146,15 +146,15 @@ namespace HMapEdit
 		/// </summary>
 		public class EditorConfig
 		{
-			private readonly ObjectConfig m_Objects = new ObjectConfig() { AlwaysWireframe = true, AlwaysShowBounding = false };
-			protected bool m_AdaptiveDegeneration;
+			private readonly ObjectConfig m_Objects = new ObjectConfig();
+			protected bool m_AdaptiveDegeneration = true;
 			private Color m_Background = Color.Black;
 			private int m_Clipping = 256 * 1024 + 128;
 			private FillMode m_FillMode = FillMode.Solid;
 			private Color m_GridColor = Color.Yellow;
 			private int m_GridSize = 1;
 			private float m_MouseWheelScroll = 5;
-			private int m_ObjectRenderDistance = 256 * 128;
+			private int m_ObjectRenderDistance = 256 * 1024;
 			protected bool m_Rotate = true;
 			private bool m_ShowCursor = true;
 			private bool m_ShowFilledPolygons = true;
@@ -351,9 +351,9 @@ namespace HMapEdit
 					set { m_ShowModelWire = value; }
 				}
 
-				public bool AlwaysShowBounding { get; set; }
+				public bool AlwaysShowBounding { get; set; } = false;
 
-				public bool AlwaysWireframe { get; set; }
+				public bool AlwaysWireframe { get; set; } = false;
 			}
 
 			#endregion

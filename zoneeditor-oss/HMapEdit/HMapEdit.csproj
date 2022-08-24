@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NiLib\Ni2Obj.cs" />
+    <Compile Include="NiLib\objs\NiShadeProperty.cs" />
     <Compile Include="Tools\CommandLine.cs" />
     <Compile Include="Tools\CommandLineFlags.cs" />
     <Compile Include="Tools\Extensions.cs" />

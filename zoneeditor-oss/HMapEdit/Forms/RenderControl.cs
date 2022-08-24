@@ -249,7 +249,7 @@ namespace HMapEdit
 			//if (hardware.DeviceCaps.SupportsPureDevice)
 			//    flags |= CreateFlags.PureDevice;
 
-			DEVICE = new Device(0, DeviceType.Hardware, this, flags, GetPP());
+			DEVICE = new Device(0, DeviceType.Hardware, this, flags | CreateFlags.MultiThreaded, GetPP());
 			DEVICE.DeviceReset += delegate
 			{
 				DEVICE.RenderState.Lighting = false;
@@ -468,7 +468,6 @@ namespace HMapEdit
 				}
 
 				DEVICE.Transform.View = Matrix.LookAtLH(cam, CAMERA_TARGET, new Vector3(0, 0, 1));
-				//DEVICE.Transform.View = Matrix.LookAtLH(Vector3.Empty, Vector3.Empty, new Vector3(0, 0, 1));
 
 				#endregion
 
@@ -521,96 +520,72 @@ namespace HMapEdit
 						var fixtures = new List<(Objects.Fixture f, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
 						foreach (Objects.Fixture f in Objects.Fixtures)
 						{
-							double dist = Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
+							var dist = Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
 
 							if (ortho)
 								dist *= 2;
 
-							if (f.Hidden || dist > Program.CONFIG.ObjectRenderDistance || dist > farp)
+							if (f.Hidden || dist > farp)
 								continue;
 
-							bool hasModel = f.NIF.Model != null;
-							bool solid = hasModel && Program.CONFIG.Objects.ShowModelSolid && !f.WireFrame;
-							bool wire = hasModel && Program.CONFIG.Objects.ShowModelWire &&
-										(f == Program.FORM.CurrentFixture /*|| !f.NIF.Model.hasTextures*/);
-							bool bb = !hasModel || Program.CONFIG.Objects.AlwaysShowBounding;
+							var hasModel = f.NIF.Model != null;
+							var solid = hasModel && Program.CONFIG.Objects.ShowModelSolid && !f.WireFrame;
+							var wire = hasModel && (f.WireFrame || Program.CONFIG.Objects.ShowModelWire || f == Program.FORM.CurrentFixture);
+							var bb = !hasModel || Program.CONFIG.Objects.AlwaysShowBounding;
 
-							if ( /*Program.CONFIG.AdaptiveDegeneration*/ true)
+							if (solid && !wire && Program.CONFIG.Objects.AlwaysWireframe)
+							{
+								solid = false;
+								wire = true;
+							}
+
+							if (Program.CONFIG.AdaptiveDegeneration)
 							{
 								int fac = 1;
 
 								if (ortho)
 									fac = 2;
 
-								int far = Program.CONFIG.ObjectRenderDistance * ADCounter * fac / 100;
-								int middle = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
-								//int near = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
+								var far = Program.CONFIG.ObjectRenderDistance * ADCounter * fac / 100;
+								var middle = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
+								var near = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
 
-								if (dist > far) continue;
+								if (dist > far)
+									continue;
 								if (dist > middle)
 								{
 									solid = false;
 									wire = false;
 									bb = true;
 								}
-								//else if (dist > near) {
-								//    wire = true;
-								//    solid = false;
-								//}
 							}
 
 							fixtures.Add((f, hasModel, solid, wire, bb));
 						}
 
-
-						//DEVICE.SamplerState[0].SrgbTexture = true;
-						//DEVICE.SamplerState[0].MagFilter = TextureFilter.Anisotropic;
-						//DEVICE.SamplerState[0].MinFilter = TextureFilter.Anisotropic;
-						//DEVICE.SamplerState[0].MipFilter = TextureFilter.Anisotropic;
-						//DEVICE.SamplerState[0].AddressU = TextureAddress.Wrap;
-						//DEVICE.SamplerState[0].AddressV = TextureAddress.Wrap;
-						//DEVICE.SamplerState[0].AddressW = TextureAddress.Wrap;
-
-						//DEVICE.TextureState[0].TextureTransform = TextureTransform.Count4 | TextureTransform.Projected;
-						//DEVICE.TextureState[0].TextureCoordinateIndex = (int)TextureCoordinateIndex.CameraSpacePosition;
-						DEVICE.VertexDeclaration = new VertexDeclaration(DEVICE, new VertexElement[] {
-							new VertexElement(
-								0, // short stream
-								0, // short offset
-								DeclarationType.Float3, // DeclarationType declType
-								DeclarationMethod.Default, // DeclarationMethod declMethod
-								DeclarationUsage.Position, // DeclarationUsage declUsage
-								0 // byte usageIndex
-							),
-							new VertexElement(
-								1,
-								0,
-								DeclarationType.Float2,
-								DeclarationMethod.Default,
-								DeclarationUsage.TextureCoordinate,
-								0
-							),
-							VertexElement.VertexDeclarationEnd
-						});
-
 						SHADER_NIF.Begin(FX.None);
 						SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
 						SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
-						foreach (var t in fixtures.Where(f => f.hasModel && f.solid)) //.obj model
+						foreach (var t in fixtures.Where(f => f.solid))
 						{
 							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
 							t.f.NIF.Model.Render(DEVICE, SHADER_NIF);
 						}
-						SHADER_NIF.End();
 
-						foreach (var t in fixtures.Where(f => f.hasModel && (Program.CONFIG.Objects.AlwaysWireframe || f.wire)))
+						foreach (var t in fixtures.Where(f => f.wire))
 						{
+							Texture col = t.f == Program.FORM.CurrentFixture ? Program.FORM.renderControl1.BLUE : null;
+							if (col != null)
+							{
+								DEVICE.SetTexture(0, col);
+								DEVICE.SetTexture(1, col);
+							}
+							DEVICE.RenderState.FillMode = FillMode.WireFrame;
 							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
-							Texture col = Program.CONFIG.ObjectWireColor ? Program.FORM.renderControl1.RED : Program.FORM.renderControl1.DARKGRAY;
-							col = (t.f == Program.FORM.CurrentFixture ? Program.FORM.renderControl1.BLUE : col);
-							DEVICE.SetTexture(0, col);
-							t.f.NIF.Model.RenderWireframe(DEVICE);
+							t.f.NIF.Model.Render(DEVICE, SHADER_NIF);
+							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
 						}
+						SHADER_NIF.End();
 
 						foreach (var t in fixtures.Where(f => f.bb)) //bounding box
 						{

@@ -1,7 +1,5 @@
-using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using HMapEdit.NiLib;
 using Microsoft.DirectX;
 using Microsoft.DirectX.Direct3D;
 using MNL;
@@ -9,9 +7,8 @@ namespace HMapEdit.Tools
 {
 	public class NIFModel
 	{
-		private readonly Texture _objTexture;
-		private readonly OBJModel _objModel;
 		private readonly NiFile _niFile;
+		private static Dictionary<string, NiFile> _cachedFiles = new Dictionary<string, NiFile>();
 
 		/// <summary>
 		/// Loads a nif model
@@ -19,24 +16,19 @@ namespace HMapEdit.Tools
 		/// <param name="nif"></param>
 		public NIFModel(Stream nif, string filename)
 		{
-			_objTexture = LocalTextures.Get("__OBJSOLID__", false);
-			using (var r = new BinaryReader(nif))
+			_cachedFiles.TryGetValue(filename, out _niFile);
+			if (_niFile == null)
 			{
-				_niFile = new NiFile(r, filename);
+				using (var r = new BinaryReader(nif))
+					_niFile = new NiFile(r, filename);
+				_cachedFiles.Add(filename, _niFile);
 			}
-			var obj = Ni2Obj.ToObj(_niFile);
-			using (var ms = new MemoryStream())
-			{
-				obj.Save(new StreamWriter(ms));
+		}
 
-#if DEBUG
-				Directory.CreateDirectory("extracted/" + Path.GetDirectoryName(filename));
-				File.WriteAllBytes("extracted/" + filename + ".obj", ms.ToArray());
-#endif
-
-				ms.Position = 0;
-				_objModel = OBJLoader.Load(new StreamReader(ms), filename);
-			}
+		public void DxInit(Device device)
+		{
+			if (_niFile != null)
+				_niFile.DxInit(device);
 		}
 
 		/// <summary>
@@ -44,21 +36,8 @@ namespace HMapEdit.Tools
 		/// </summary>
 		public void Render(Device device, Effect effect)
 		{
-			if (device != null && Program.CONFIG.ShowRawNIFs && _niFile != null)
+			if (_niFile != null)
 				_niFile.Render(device, effect);
-			else if (_objModel != null)
-			{
-				device.SetTexture(0, _objTexture);
-				_objModel.Render();
-			}
-		}
-
-		public void RenderWireframe(Device device)
-		{
-			device.RenderState.FillMode = FillMode.WireFrame;
-			if (_objModel != null)
-				_objModel.Render();
-			device.RenderState.FillMode = Program.CONFIG.FillMode;
 		}
 
 		/// <summary>
@@ -69,7 +48,10 @@ namespace HMapEdit.Tools
 		/// <returns></returns>
 		public bool Intersect(Vector3 src, Vector3 dir)
 		{
-			return _objModel == null ? false : _objModel.Intersect(src, dir);
+			if (_niFile == null)
+				return false;
+			//return _niFile.Intersect(src, dir);
+			return false;
 		}
 	}
 }
