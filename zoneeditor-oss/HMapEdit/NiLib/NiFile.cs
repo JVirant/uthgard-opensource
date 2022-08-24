@@ -218,15 +218,15 @@ namespace MNL
 				node.DxInit(device);
 			_dxInitDone = true;
 		}
-		public void Render(Device device, Effect effect)
+		public void Render(Device device, Effect effect, Vector3 position)
 		{
 			var node = FindRoot() as NiNode;
 			if (node != null)
-				_Render(device, effect, node, Matrix.Identity);
+				_Render(device, effect, node, Matrix.Identity, ref position);
 		}
 
 		private static EffectHandle _handleWorld = EffectHandle.FromString("World");
-		private void _Render(Device device, Effect effect, NiAVObject obj, Matrix modelMatrix)
+		private void _Render(Device device, Effect effect, NiAVObject obj, Matrix modelMatrix, ref Vector3 position)
 		{
 			// TODO filter correctly
 			if (obj.Name.Value.ToLower() == "collidee")
@@ -236,9 +236,38 @@ namespace MNL
 			modelMatrix = Matrix.Scaling(obj.Scale, obj.Scale, obj.Scale) * modelMatrix;
 			modelMatrix = obj.Rotation * modelMatrix;
 
-			var mode = _FindDrawMode(obj);
-			var oldMode = device.RenderState.CullMode;
-			device.RenderState.CullMode = mode == eFaceDrawMode.DRAW_CCW ? Cull.CounterClockwise : (mode == eFaceDrawMode.DRAW_CW ? Cull.Clockwise : Cull.None);
+			if (obj is NiLODNode lod)
+			{
+				var dist = Vector3.Length(Program.FORM.renderControl1.CAMERA - position) * 0.125;
+				if (lod.LODLevels != null)
+				{
+					for (int i = 0; i < lod.LODLevels.Length; i++)
+					{
+						var level = lod.LODLevels[i];
+						if (lod.Children[i].IsValid() && level.NearExtent <= dist && dist <= level.FarExtent)
+						{
+							_Render(device, effect, lod.Children[i].Object, modelMatrix, ref position);
+							return;
+						}
+					}
+				}
+				if (lod.LODLevelData != null && lod.LODLevelData.IsValid() && lod.LODLevelData.Object is NiRangeLODData ranges)
+				{
+					for (int i = 0; i < ranges.LODLevels.Length; i++)
+					{
+						var level = ranges.LODLevels[i];
+						if (lod.Children[i].IsValid() && level.NearExtent <= dist && dist <= level.FarExtent)
+						{
+							_Render(device, effect, lod.Children[i].Object, modelMatrix, ref position);
+							return;
+						}
+					}
+				}
+			}
+			if (obj is NiNode node)
+				foreach (var child in node.Children)
+					if (child.IsValid())
+						_Render(device, effect, child.Object, modelMatrix, ref position);
 			if (obj is NiTriShape || obj  is NiTriStrips)
 			{
 				foreach (var prop in obj.Properties)
@@ -267,26 +296,15 @@ namespace MNL
 					}
 				}
 
+				var mode = _FindDrawMode(obj);
+				var oldMode = device.RenderState.CullMode;
+				device.RenderState.CullMode = mode == eFaceDrawMode.DRAW_CCW ? Cull.CounterClockwise : (mode == eFaceDrawMode.DRAW_CW ? Cull.Clockwise : Cull.None);
 				effect.SetValue(_handleWorld, modelMatrix * device.Transform.World);
 				effect.BeginPass(0);
 				obj.Render(device);
 				effect.EndPass();
+				device.RenderState.CullMode = oldMode;
 			}
-			device.RenderState.CullMode = oldMode;
-
-			if (obj is NiLODNode lod)
-			{
-				var near = lod.Children.FirstOrDefault(n => n.IsValid() && n.Object.Name.Value == "near");
-				if (near != null)
-				{
-					_Render(device, effect, near.Object, modelMatrix);
-					return;
-				}
-			}
-			if (obj is NiNode node)
-				foreach (var child in node.Children)
-					if (child.IsValid())
-						_Render(device, effect, child.Object, modelMatrix);
 		}
 
 		private static eFaceDrawMode _FindDrawMode(NiAVObject obj)

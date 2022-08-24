@@ -51,7 +51,7 @@ namespace MNL
 			base.DxInit(device);
 			var vertexElements = new List<(VertexElement ve, VertexBuffer vb)>();
 
-			var vb = new VertexBuffer(typeof(Vector3), Vertices.Length, device, Usage.Dynamic, VertexFormats.Position, Pool.Default);
+			var vb = new VertexBuffer(typeof(Vector3), Vertices.Length, device, Usage.None, VertexFormats.Position, Pool.Managed);
 			vb.SetData(Vertices, 0, LockFlags.Discard);
 			vertexElements.Add((new VertexElement((short)vertexElements.Count, 0, DeclarationType.Float3, DeclarationMethod.Default, DeclarationUsage.Position, 0), vb));
 
@@ -59,14 +59,14 @@ namespace MNL
 			{
 				for (byte i = 0; i < UVSets.Length; i++)
 				{
-					vb = new VertexBuffer(typeof(Vector2), UVSets[i].Length, device, Usage.Dynamic, (VertexFormats)(i << 8), Pool.Default);
+					vb = new VertexBuffer(typeof(Vector2), UVSets[i].Length, device, Usage.None, (VertexFormats)(i << 8), Pool.Managed);
 					vb.SetData(UVSets[i], 0, LockFlags.Discard);
 					vertexElements.Add((new VertexElement((short)vertexElements.Count, 0, DeclarationType.Float2, DeclarationMethod.Default, DeclarationUsage.TextureCoordinate, i), vb));
 				}
 			}
 			if ((Normals?.Length ?? 0) > 0)
 			{
-				vb = new VertexBuffer(typeof(Vector3), Normals.Length, device, Usage.Dynamic, VertexFormats.Normal, Pool.Default);
+				vb = new VertexBuffer(typeof(Vector3), Normals.Length, device, Usage.None, VertexFormats.Normal, Pool.Managed);
 				vb.SetData(Normals, 0, LockFlags.Discard);
 				vertexElements.Add((new VertexElement((short)vertexElements.Count, 0, DeclarationType.Float3, DeclarationMethod.Default, DeclarationUsage.Normal, 0), vb));
 			}
@@ -75,7 +75,7 @@ namespace MNL
 				.Select(indices =>
 				{
 
-					var ib = new IndexBuffer(typeof(ushort), indices.Length, device, Usage.Dynamic, Pool.Default);
+					var ib = new IndexBuffer(typeof(ushort), indices.Length, device, Usage.None, Pool.Managed);
 					ib.SetData(indices, 0, LockFlags.Discard);
 					return ib;
 				})

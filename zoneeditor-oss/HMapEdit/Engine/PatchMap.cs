@@ -297,9 +297,7 @@ namespace HMapEdit.Engine
 						//Mips
 						try
 						{
-							using (
-							  Texture mip = TextureLoader.FromFile(p.Device, pp, 0, 0, 0, Usage.Dynamic, Format.A8R8G8B8, Pool.Default,
-																   Filter.Linear, Filter.Linear, 0))
+							using (Texture mip = TextureLoader.FromFile(p.Device, pp, 0, 0, 0, Usage.None, Format.A8R8G8B8, Pool.Managed, Filter.Linear, Filter.Linear, 0))
 							{
 								//mip.GenerateMipSubLevels();
 								TextureLoader.Save(pp, ImageFileFormat.Dds, mip);
@@ -447,7 +445,7 @@ namespace HMapEdit.Engine
 
 				if (t == null)
 				{
-					t = new Texture(Program.FORM.renderControl1.DEVICE, 256, 256, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default);
+					t = new Texture(Program.FORM.renderControl1.DEVICE, 256, 256, 1, Usage.None, Format.A8R8G8B8, Pool.Managed);
 					Surface ss = t.GetSurfaceLevel(0);
 					Graphics gg = ss.GetGraphics();
 					Color cc = layer > 1 ? Color.Black : Color.Red;

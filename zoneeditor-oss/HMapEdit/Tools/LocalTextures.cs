@@ -46,7 +46,7 @@ namespace HMapEdit
 					Console.WriteLine("Loading Texture " + f);
 					Texture t;
 					if (file.Contains("patch"))
-						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f), 0, 0, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default, Filter.Box, Filter.Box, 0);
+						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f), 0, 0, 1, Usage.None, Format.A8R8G8B8, Pool.Managed, Filter.Box, Filter.Box, 0);
 					else
 						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f));
 					m_Textures.Add(n, t);

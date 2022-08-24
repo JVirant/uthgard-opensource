@@ -34,10 +34,12 @@ namespace HMapEdit.Tools
 		/// <summary>
 		/// Renders the model
 		/// </summary>
-		public void Render(Device device, Effect effect)
+		public void Render(Device device, Effect effect, ref Matrix world)
 		{
-			if (_niFile != null)
-				_niFile.Render(device, effect);
+			if (_niFile == null)
+				return;
+			var position = Vector3.Transform(Vector3.Empty, world);
+			_niFile.Render(device, effect, new Vector3(position.X, position.Y, position.Z));
 		}
 
 		/// <summary>

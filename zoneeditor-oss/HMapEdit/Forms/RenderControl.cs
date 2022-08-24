@@ -568,8 +568,9 @@ namespace HMapEdit
 						SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
 						foreach (var t in fixtures.Where(f => f.solid))
 						{
-							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
-							t.f.NIF.Model.Render(DEVICE, SHADER_NIF);
+							var world = GetFixtureMatrix(t.f, false);
+							DEVICE.Transform.World = world;
+							t.f.NIF.Model.Render(DEVICE, SHADER_NIF, ref world);
 						}
 
 						foreach (var t in fixtures.Where(f => f.wire))
@@ -581,8 +582,9 @@ namespace HMapEdit
 								DEVICE.SetTexture(1, col);
 							}
 							DEVICE.RenderState.FillMode = FillMode.WireFrame;
-							DEVICE.Transform.World = GetFixtureMatrix(t.f, false);
-							t.f.NIF.Model.Render(DEVICE, SHADER_NIF);
+							var world = GetFixtureMatrix(t.f, false);
+							DEVICE.Transform.World = world;
+							t.f.NIF.Model.Render(DEVICE, SHADER_NIF, ref world);
 							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
 						}
 						SHADER_NIF.End();
@@ -696,7 +698,7 @@ namespace HMapEdit
 						DEVICE.SetTexture(0, null);
 
 						Cull prev = DEVICE.RenderState.CullMode;
-						DEVICE.RenderState.CullMode = Cull.Clockwise;
+						DEVICE.RenderState.CullMode = Cull.None;
 
 						foreach (Polygon p in Polygon.Polygons)
 						{
@@ -1086,27 +1088,22 @@ namespace HMapEdit
 			int xTri = xVectors - 1;
 			int yTri = yVectors - 1;
 
-			var elem =
-			  new[] {
-				new VertexElement(0, 0, DeclarationType.Float3, DeclarationMethod.Default, DeclarationUsage.Position, 0)
-				,
-				new VertexElement(0, 12, DeclarationType.Float2, DeclarationMethod.Default,
-								  DeclarationUsage.TextureCoordinate, 0),
-				new VertexElement(0, 20, DeclarationType.Float2, DeclarationMethod.Default,
-								  DeclarationUsage.TextureCoordinate, 1),
+			var elem = new[] {
+				new VertexElement(0, 0, DeclarationType.Float3, DeclarationMethod.Default, DeclarationUsage.Position, 0),
+				new VertexElement(0, 12, DeclarationType.Float2, DeclarationMethod.Default, DeclarationUsage.TextureCoordinate, 0),
+				new VertexElement(0, 20, DeclarationType.Float2, DeclarationMethod.Default, DeclarationUsage.TextureCoordinate, 1),
 				VertexElement.VertexDeclarationEnd
-					};
+			};
 
 			GridElem = elem;
 			GridDecl = new VertexDeclaration(DEVICE, elem);
 			GridSize = 28;
 
-			var m =
-			  new Mesh(xTri * yTri * 2, xVectors * yVectors, MeshFlags.Managed, elem, DEVICE);
+			var m = new Mesh(xTri * yTri * 2, xVectors * yVectors, MeshFlags.Managed, elem, DEVICE);
 
 			using (VertexBuffer vb = m.VertexBuffer)
 			{
-				GraphicsStream vd = vb.Lock(0, 0, LockFlags.None);
+				GraphicsStream vd = vb.Lock(0, 0, LockFlags.Discard);
 				for (int y = 0; y < yVectors; y++) //0-31 => 32x32 points (256/8)
 				{
 					for (int x = 0; x < xVectors; x++)
@@ -1127,7 +1124,7 @@ namespace HMapEdit
 
 			using (IndexBuffer ib = m.IndexBuffer)
 			{
-				GraphicsStream id = ib.Lock(0, 0, LockFlags.None);
+				GraphicsStream id = ib.Lock(0, 0, LockFlags.Discard);
 
 				for (int y = 0; y < yTri; y++)
 				{
@@ -1203,7 +1200,7 @@ namespace HMapEdit
 
 			using (VertexBuffer vb = m.VertexBuffer)
 			{
-				GraphicsStream vd = vb.Lock(0, 0, LockFlags.None);
+				GraphicsStream vd = vb.Lock(0, 0, LockFlags.Discard);
 
 				for (int y = 0; y < c; y++) //0-31 => 32x32 points (256/8)
 				{
@@ -1219,7 +1216,7 @@ namespace HMapEdit
 
 			using (IndexBuffer ib = m.IndexBuffer)
 			{
-				GraphicsStream id = ib.Lock(0, 0, LockFlags.None);
+				GraphicsStream id = ib.Lock(0, 0, LockFlags.Discard);
 
 				for (int y = 0; y < c - 1; y++)
 				{
@@ -1302,14 +1299,10 @@ namespace HMapEdit
 					if (sub == null) continue;
 
 					rayStart.Z = 0.0f;
-					Vector3 uRayNear =
-					  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-										DEVICE.Transform.View, GetSubMatrix(a, b));
+					Vector3 uRayNear = Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection, DEVICE.Transform.View, GetSubMatrix(a, b));
 
 					rayStart.Z = 1.0f;
-					Vector3 uRayFar =
-					  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-										DEVICE.Transform.View, GetSubMatrix(a, b));
+					Vector3 uRayFar = Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection, DEVICE.Transform.View, GetSubMatrix(a, b));
 
 					Vector3 rayDir = Vector3.Subtract(uRayFar, uRayNear);
 

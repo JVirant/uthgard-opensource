@@ -56,7 +56,7 @@ float4 ps(VS_OUTPUT Input) : COLOR
 	float4 diffuse0 = tex2D(sam0, Input.TexCoord0.xy);
 	float4 diffuse1 = tex2D(sam1, Input.TexCoord1.xy);
 	float light = (0.1 + saturate(dot(normalize(Light), Input.Normal)));
-	return float4(diffuse0.rgb * light + diffuse1.rgb * light, diffuse0.a);
+	return float4(diffuse0.rgb * light * diffuse0.a, diffuse0.a);
 }
 
 technique PM
