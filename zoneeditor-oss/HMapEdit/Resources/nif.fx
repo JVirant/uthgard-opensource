@@ -1,7 +1,8 @@
 float4x4 World : WORLD;
 float4x4 View : VIEW;
 float4x4 Projection : PROJECTION;
-float3 Light = float3(5, 5, 5);
+float4 Light1 = float4(5, 5, 5, 1.1);
+float4 Light2 = float4(-5, -5, 5, 0.25);
 
 sampler sam0 = sampler_state {
 	minfilter = Anisotropic;
@@ -34,29 +35,44 @@ struct VS_OUTPUT
 	float2 TexCoord0: TEXCOORD0;
 	float2 TexCoord1: TEXCOORD1;
 	float3 Normal: TEXCOORD2;
+	float4 DepthPosition: TEXCOORD3;
 };
 
-VS_OUTPUT vs(VS_INPUT Input)
+struct PS_OUTPUT
 {
-	VS_OUTPUT Output;
+	float4 Color: COLOR;
+	float Depth: DEPTH;
+};
+
+VS_OUTPUT vs(VS_INPUT input)
+{
+	VS_OUTPUT output;
 
 	float4x4 WorldView = mul(World, View);
 	float4x4 WorldViewProjection = mul(WorldView, Projection);
 
-	Output.Position = mul(Input.Position, WorldViewProjection);
-	Output.TexCoord0 = Input.TexCoord0;
-	Output.TexCoord1 = Input.TexCoord1;
-	Output.Normal = normalize(mul(Input.Normal, World));
+	output.Position = mul(input.Position, WorldViewProjection);
+	output.TexCoord0 = input.TexCoord0;
+	output.TexCoord1 = input.TexCoord1;
+	output.Normal = normalize(mul(input.Normal, World));
+	output.DepthPosition = output.Position;
 
-	return Output;
+	return output;
 }
 
-float4 ps(VS_OUTPUT Input) : COLOR
+PS_OUTPUT ps(VS_OUTPUT input)
 {
-	float4 diffuse0 = tex2D(sam0, Input.TexCoord0.xy);
-	float4 diffuse1 = tex2D(sam1, Input.TexCoord1.xy);
-	float light = (0.1 + saturate(dot(normalize(Light), Input.Normal)));
-	return float4(diffuse0.rgb * light * diffuse0.a, diffuse0.a);
+	PS_OUTPUT output;
+
+	float4 diffuse0 = tex2D(sam0, input.TexCoord0.xy);
+	float4 diffuse1 = tex2D(sam1, input.TexCoord1.xy);
+	float light = saturate(dot(normalize(Light1.xyz), input.Normal)) * Light1.w;
+	light += saturate(dot(normalize(Light2.xyz), input.Normal)) * Light2.w;
+
+	output.Color = float4(diffuse0.rgb * light * diffuse0.a, diffuse0.a);
+	output.Depth = diffuse0.a < 0.1 ? 1e9 : input.DepthPosition.z / input.DepthPosition.w;
+
+	return output;
 }
 
 technique PM
@@ -64,7 +80,7 @@ technique PM
 	pass P0
 	{
 		VertexShader = compile vs_2_0 vs();
-		PixelShader = compile ps_2_0 ps();
+		PixelShader = compile ps_3_0 ps();
 	}
 }
 

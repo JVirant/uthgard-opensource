@@ -386,6 +386,7 @@ namespace HMapEdit
 
 		public void Deinitialize()
 		{
+			SHADER_NIF.Dispose();
 			SHADER.Dispose();
 			Environment.Exit(0); //clean..!
 			DEVICE.Dispose();
@@ -394,7 +395,8 @@ namespace HMapEdit
 
 		public void Render()
 		{
-			if (DEVICE == null || SHADER_NIF == null || (!Visible)) return;
+			if (DEVICE == null || SHADER_NIF == null || !Visible)
+				return;
 
 			Watch.Start();
 			{
@@ -517,10 +519,10 @@ namespace HMapEdit
 				{
 					lock (Objects.Fixtures)
 					{
-						var fixtures = new List<(Objects.Fixture f, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
+						var fixtures = new List<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
 						foreach (Objects.Fixture f in Objects.Fixtures)
 						{
-							var dist = Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
+							var dist = (float)Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
 
 							if (ortho)
 								dist *= 2;
@@ -560,8 +562,10 @@ namespace HMapEdit
 								}
 							}
 
-							fixtures.Add((f, hasModel, solid, wire, bb));
+							fixtures.Add((f, dist, hasModel, solid, wire, bb));
 						}
+
+						fixtures.Sort(new Comparison<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>((a, b) => (int)((b.distance - a.distance) * 10)));
 
 						SHADER_NIF.Begin(FX.None);
 						SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
@@ -670,19 +674,6 @@ namespace HMapEdit
 
 				#endregion
 
-				#region Grid
-
-				if (GRID != null && Program.CONFIG.ShowGrid)
-				{
-					DEVICE.SetTexture(0, null);
-					DEVICE.RenderState.FillMode = FillMode.WireFrame;
-					DEVICE.Transform.World = GetGridMatrix();
-					GRID.DrawSubset(0);
-					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-				}
-
-				#endregion
-
 				#region Filled Polygons
 
 				if (Program.CONFIG.ShowFilledPolygons)
@@ -744,12 +735,8 @@ namespace HMapEdit
 								var tri = new CustomVertex.PositionColored[4];
 
 								tri[0] = new CustomVertex.PositionColored(j.First, ALPHACOLOR); //top left
-								tri[1] =
-								  new CustomVertex.PositionColored(new Vector3(j.Second.X, j.Second.Y, j.First.Z), ALPHACOLOR);
-								//top right
-								tri[2] =
-								  new CustomVertex.PositionColored(new Vector3(j.First.X, j.First.Y, j.Second.Z), ALPHACOLOR);
-								//bottom left
+								tri[1] = new CustomVertex.PositionColored(new Vector3(j.Second.X, j.Second.Y, j.First.Z), ALPHACOLOR); //top right
+								tri[2] = new CustomVertex.PositionColored(new Vector3(j.First.X, j.First.Y, j.Second.Z), ALPHACOLOR); //bottom left
 								tri[3] = new CustomVertex.PositionColored(j.Second, ALPHACOLOR); //bottom right
 
 								DEVICE.DrawUserPrimitives(PrimitiveType.TriangleStrip, 2, tri);
@@ -760,6 +747,19 @@ namespace HMapEdit
 					}
 
 					#endregion
+				}
+
+				#endregion
+
+				#region Grid
+
+				if (GRID != null && Program.CONFIG.ShowGrid)
+				{
+					DEVICE.SetTexture(0, null);
+					DEVICE.RenderState.FillMode = FillMode.WireFrame;
+					DEVICE.Transform.World = GetGridMatrix();
+					GRID.DrawSubset(0);
+					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
 				}
 
 				#endregion
