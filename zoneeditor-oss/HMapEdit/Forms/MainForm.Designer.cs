@@ -41,6 +41,7 @@
           this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
           this.undoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
           this.nIFSToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+          this.NIFViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
           this.cUSTOMToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
           this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
           this.clearUndolistToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -166,6 +167,7 @@
           this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.undoToolStripMenuItem,
             this.nIFSToolStripMenuItem,
+            this.NIFViewerToolStripMenuItem,
             this.cUSTOMToolStripMenuItem,
             this.toolStripMenuItem1,
             this.clearUndolistToolStripMenuItem,
@@ -197,6 +199,13 @@
           this.nIFSToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
           this.nIFSToolStripMenuItem.Text = "NIFS..";
           this.nIFSToolStripMenuItem.Click += new System.EventHandler(this.nIFSToolStripMenuItem_Click);
+          // 
+          // NIFViewerToolStripMenuItem
+          // 
+          this.NIFViewerToolStripMenuItem.Name = "NIFViewerToolStripMenuItem";
+          this.NIFViewerToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+          this.NIFViewerToolStripMenuItem.Text = "NIF Viewer";
+          this.NIFViewerToolStripMenuItem.Click += new System.EventHandler(this.NIFViewerToolStripMenuItem_Click);
           // 
           // cUSTOMToolStripMenuItem
           // 
@@ -610,7 +619,8 @@
 		private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem nIFSToolStripMenuItem;
-		private System.Windows.Forms.ToolStripButton toolStripButton6;
+        private System.Windows.Forms.ToolStripMenuItem NIFViewerToolStripMenuItem;
+        private System.Windows.Forms.ToolStripButton toolStripButton6;
         private System.Windows.Forms.ToolStripMenuItem closeToolStripMenuItem;
 		private System.Windows.Forms.ToolStripButton toolStripButton7;
 		private System.Windows.Forms.ToolStripButton toolStripButton8;

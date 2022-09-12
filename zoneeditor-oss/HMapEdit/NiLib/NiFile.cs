@@ -218,15 +218,41 @@ namespace MNL
 				node.DxInit(device);
 			_dxInitDone = true;
 		}
-		public void Render(Device device, Effect effect, Vector3 position)
+		public void DxDeinit()
+		{
+			if (!_dxInitDone)
+				return;
+			var node = FindRoot();
+			if (node != null)
+				node.DxDeinit();
+			_dxInitDone = false;
+		}
+		public void Render(LocalTextures localTextures, Effect effect, Vector3 position)
 		{
 			var node = FindRoot() as NiNode;
 			if (node != null)
-				_Render(device, effect, node, Matrix.Identity, ref position);
+				_Render(localTextures, effect, node, Matrix.Identity, ref position);
 		}
 
 		private static EffectHandle _handleWorld = EffectHandle.FromString("World");
-		private void _Render(Device device, Effect effect, NiAVObject obj, Matrix modelMatrix, ref Vector3 position)
+
+		private static EffectHandle _handleHasBase = EffectHandle.FromString("hasBase");
+		private static EffectHandle _handleBaseTexture = EffectHandle.FromString("BaseTexture");
+		private static EffectHandle _handleBaseTexUVSetIndex = EffectHandle.FromString("BaseTexUVSetIndex");
+
+		private static EffectHandle _handleHasDetail = EffectHandle.FromString("hasDetail");
+		private static EffectHandle _handleDetailTexture = EffectHandle.FromString("DetailTexture");
+		private static EffectHandle _handleDetailTexUVSetIndex = EffectHandle.FromString("DetailTexUVSetIndex");
+
+		private static EffectHandle _handleHasDark = EffectHandle.FromString("hasDark");
+		private static EffectHandle _handleDarkTexture = EffectHandle.FromString("DarkTexture");
+		private static EffectHandle _handleDarkTexUVSetIndex = EffectHandle.FromString("DarkTexUVSetIndex");
+
+		private static EffectHandle _handleHasBump = EffectHandle.FromString("hasBump");
+		private static EffectHandle _handleBumpTexture = EffectHandle.FromString("BumpTexture");
+		private static EffectHandle _handleBumpTexUVSetIndex = EffectHandle.FromString("BumpTexUVSetIndex");
+
+		private void _Render(LocalTextures localTextures, Effect effect, NiAVObject obj, Matrix modelMatrix, ref Vector3 position)
 		{
 			// TODO filter correctly
 			if (obj.Name.Value.ToLower() == "collidee")
@@ -235,6 +261,8 @@ namespace MNL
 			modelMatrix = Matrix.Translation(obj.Translation.X, obj.Translation.Y, obj.Translation.Z) * modelMatrix;
 			modelMatrix = Matrix.Scaling(obj.Scale, obj.Scale, obj.Scale) * modelMatrix;
 			modelMatrix = obj.Rotation * modelMatrix;
+
+			var device = localTextures.Device;
 
 			if (obj is NiLODNode lod)
 			{
@@ -246,7 +274,7 @@ namespace MNL
 						var level = lod.LODLevels[i];
 						if (lod.Children[i].IsValid() && level.NearExtent <= dist && dist <= level.FarExtent)
 						{
-							_Render(device, effect, lod.Children[i].Object, modelMatrix, ref position);
+							_Render(localTextures, effect, lod.Children[i].Object, modelMatrix, ref position);
 							return;
 						}
 					}
@@ -258,7 +286,7 @@ namespace MNL
 						var level = ranges.LODLevels[i];
 						if (lod.Children[i].IsValid() && level.NearExtent <= dist && dist <= level.FarExtent)
 						{
-							_Render(device, effect, lod.Children[i].Object, modelMatrix, ref position);
+							_Render(localTextures, effect, lod.Children[i].Object, modelMatrix, ref position);
 							return;
 						}
 					}
@@ -267,32 +295,61 @@ namespace MNL
 			if (obj is NiNode node)
 				foreach (var child in node.Children)
 					if (child.IsValid())
-						_Render(device, effect, child.Object, modelMatrix, ref position);
+						_Render(localTextures, effect, child.Object, modelMatrix, ref position);
 			if (obj is NiTriShape || obj  is NiTriStrips)
 			{
 				foreach (var prop in obj.Properties)
 				{
 					if (prop.Object is NiTexturingProperty tex)
 					{
-						// TODO review this part, it's not ok: UVSetIndex is not the "sampler idx"
 						if (tex.BaseTexture?.Source != null && tex.BaseTexture.Source.IsValid())
 						{
 							tex.BaseTexture.Source.SetRef(this);
-							var texture = LocalTextures.Get(tex.BaseTexture.Source.Object.FileName.Value, false, true);
-							device.SetTexture((int)tex.BaseTexture.UVSetIndex, texture);
+							var texture = localTextures.Get(tex.BaseTexture.Source.Object.FileName.Value, false, true);
+							effect.SetValue(_handleBaseTexture, texture);
+							effect.SetValue(_handleBaseTexUVSetIndex, tex.BaseTexture.UVSetIndex);
+							effect.SetValue(_handleHasBase, true);
 						}
+						else
+							effect.SetValue(_handleHasBase, false);
+
 						if (tex.DetailTexture?.Source != null && tex.DetailTexture.Source.IsValid())
 						{
 							tex.DetailTexture.Source.SetRef(this);
-							var texture = LocalTextures.Get(tex.DetailTexture.Source.Object.FileName.Value, true, true);
-							device.SetTexture((int)tex.DetailTexture.UVSetIndex, texture);
+							var texture = localTextures.Get(tex.DetailTexture.Source.Object.FileName.Value, true, true);
+							effect.SetValue(_handleDetailTexture, texture);
+							effect.SetValue(_handleDetailTexUVSetIndex, tex.DetailTexture.UVSetIndex);
+							effect.SetValue(_handleHasDetail, true);
 						}
+						else
+							effect.SetValue(_handleHasDetail, false);
+
 						if (tex.DarkTexture?.Source != null && tex.DarkTexture.Source.IsValid())
 						{
 							tex.DarkTexture.Source.SetRef(this);
-							var texture = LocalTextures.Get(tex.DarkTexture.Source.Object.FileName.Value, true, true);
-							device.SetTexture((int)tex.DarkTexture.UVSetIndex, texture);
+							var texture = localTextures.Get(tex.DarkTexture.Source.Object.FileName.Value, true, true);
+							effect.SetValue(_handleDarkTexture, texture);
+							effect.SetValue(_handleDarkTexUVSetIndex, tex.DarkTexture.UVSetIndex);
+							effect.SetValue(_handleHasDark, true);
 						}
+						else
+							effect.SetValue(_handleHasDark, false);
+
+						if (tex.BumpMapTexture?.Source != null && tex.BumpMapTexture.Source.IsValid())
+						{
+							tex.BumpMapTexture.Source.SetRef(this);
+							var texture = localTextures.Get(tex.BumpMapTexture.Source.Object.FileName.Value, true, true);
+							effect.SetValue(_handleBumpTexture, texture);
+							effect.SetValue(_handleBumpTexUVSetIndex, tex.BumpMapTexture.UVSetIndex);
+							effect.SetValue(_handleHasBump, true);
+						}
+						else
+							effect.SetValue(_handleHasBump, false);
+
+						if (tex.GlossTexture?.Source != null && tex.GlossTexture.Source.IsValid())
+							Console.WriteLine("Gloss!");
+						if (tex.GlowTexture?.Source != null && tex.GlowTexture.Source.IsValid())
+							Console.WriteLine("Glow!");
 					}
 				}
 

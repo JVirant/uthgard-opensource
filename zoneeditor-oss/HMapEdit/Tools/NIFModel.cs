@@ -7,6 +7,7 @@ namespace HMapEdit.Tools
 {
 	public class NIFModel
 	{
+		public readonly string filename;
 		private readonly NiFile _niFile;
 		private static Dictionary<string, NiFile> _cachedFiles = new Dictionary<string, NiFile>();
 
@@ -14,8 +15,16 @@ namespace HMapEdit.Tools
 		/// Loads a nif model
 		/// </summary>
 		/// <param name="nif"></param>
-		public NIFModel(Stream nif, string filename)
+		public NIFModel(Stream nif, string filename, bool useCache = true)
 		{
+			this.filename = filename;
+			if (!useCache)
+			{
+				using (var r = new BinaryReader(nif))
+					_niFile = new NiFile(r, filename);
+				return;
+			}
+
 			_cachedFiles.TryGetValue(filename, out _niFile);
 			if (_niFile == null)
 			{
@@ -30,16 +39,21 @@ namespace HMapEdit.Tools
 			if (_niFile != null)
 				_niFile.DxInit(device);
 		}
+		public void DxDeinit()
+		{
+			if (_niFile != null)
+				_niFile.DxDeinit();
+		}
 
 		/// <summary>
 		/// Renders the model
 		/// </summary>
-		public void Render(Device device, Effect effect, ref Matrix world)
+		public void Render(LocalTextures localTextures, Effect effect, ref Matrix world)
 		{
 			if (_niFile == null)
 				return;
 			var position = Vector3.Transform(Vector3.Empty, world);
-			_niFile.Render(device, effect, new Vector3(position.X, position.Y, position.Z));
+			_niFile.Render(localTextures, effect, new Vector3(position.X, position.Y, position.Z));
 		}
 
 		/// <summary>

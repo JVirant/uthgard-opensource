@@ -39,6 +39,12 @@ namespace MNL
 			if (LODLevelData?.IsValid() ?? false)
 				LODLevelData.Object.DxInit(device);
 		}
+		public override void DxDeinit()
+		{
+			base.DxDeinit();
+			if (LODLevelData?.IsValid() ?? false)
+				LODLevelData.Object.DxDeinit();
+		}
 		public override void Render(Device device)
 		{
 			base.Render(device);

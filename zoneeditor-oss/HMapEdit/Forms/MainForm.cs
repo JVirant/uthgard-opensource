@@ -302,6 +302,16 @@ namespace HMapEdit
 			new NIFForm().ShowDialog();
 		}
 
+		private void NIFViewerToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			if (Zone.BUSY)
+			{
+				MessageBox.Show("ZoneEdit is busy!", "Operation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return;
+			}
+
+			new NIFViewer().ShowDialog();
+		}
 		private void toolStripButton6_Click(object sender, EventArgs e)
 		{
 			Program.MODE = Program.eMode.Zonejump;

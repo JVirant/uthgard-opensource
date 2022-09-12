@@ -265,6 +265,7 @@ namespace HMapEdit.Tools
 			{
 				yield return "nifs";
 				yield return Path.Combine("zones", "nifs");
+				yield return Path.Combine("zones", "dnifs");
 			}
 		}
 

@@ -84,6 +84,22 @@ namespace MNL
 			_vertices = vertexElements.Select(e => e.vb).ToArray();
 		}
 
+		public override void DxDeinit()
+		{
+			base.DxDeinit();
+			if (_indices == null)
+				return;
+
+			foreach (var indices in _indices)
+				indices.Dispose();
+			_indices = null;
+			foreach (var vertices in _vertices)
+				vertices.Dispose();
+			_vertices = null;
+			_vertexDeclaration.Dispose();
+			_vertexDeclaration = null;
+		}
+
 		public override void Render(Device device)
 		{
 			base.Render(device);

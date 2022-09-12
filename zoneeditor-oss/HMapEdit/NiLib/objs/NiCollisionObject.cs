@@ -18,6 +18,12 @@ namespace MNL
 			if (Target.IsValid())
 				Target.Object.DxInit(device);
 		}
+		public override void DxDeinit()
+		{
+			base.DxDeinit();
+			if (Target.IsValid())
+				Target.Object.DxDeinit();
+		}
 		public override void Render(Device device)
 		{
 			base.Render(device);

@@ -123,7 +123,7 @@ namespace HMapEdit.Engine
 					{
 						if (GameData.Exists(string.Format(ppp, pX, pY, i)))
 						{
-							Texture p = LocalTextures.Get(string.Format(ppp, pX, pY, i), false);
+							Texture p = Program.FORM.renderControl1.localTextures.Get(string.Format(ppp, pX, pY, i), false);
 							cur.Patch[i] = p;
 						}
 					}

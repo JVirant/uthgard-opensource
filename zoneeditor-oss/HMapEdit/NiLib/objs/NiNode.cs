@@ -33,6 +33,16 @@ namespace MNL
 				if (effect.IsValid())
 					effect.Object.DxInit(device);
 		}
+		public override void DxDeinit()
+		{
+			base.DxDeinit();
+			foreach (var child in Children)
+				if (child.IsValid())
+					child.Object.DxDeinit();
+			foreach (var effect in Effects)
+				if (effect.IsValid())
+					effect.Object.DxDeinit();
+		}
 		public override void Render(Device device)
 		{
 			base.Render(device);

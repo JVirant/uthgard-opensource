@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using HMapEdit.Engine;
@@ -54,6 +55,8 @@ namespace HMapEdit
 		public Texture YELLOW;
 		public Mesh _BOX;
 
+		public LocalTextures localTextures;
+
 		#region Vertexes
 
 		private static float mid;
@@ -61,165 +64,66 @@ namespace HMapEdit
 		private static float pos = +0.5f;
 
 		public CustomVertex.PositionColored[] ARROW = new[] {
-														  new CustomVertex.PositionColored(new Vector3(mid, mid, mid),
-																						   ARROW_COLOR),
-														  new CustomVertex.PositionColored(
-															new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
-														  new CustomVertex.PositionColored(
-															new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
-														  new CustomVertex.PositionColored(
-															new Vector3(mid, neg - 0.3f, pos), ARROW_COLOR),
-														  new CustomVertex.PositionColored(
-															new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
-														  new CustomVertex.PositionColored(
-															new Vector3(mid, neg - 0.3f, neg), ARROW_COLOR),
-														};
+			new CustomVertex.PositionColored(new Vector3(mid, mid - 0.0f, mid), ARROW_COLOR),
+			new CustomVertex.PositionColored(new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
+			new CustomVertex.PositionColored(new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
+			new CustomVertex.PositionColored(new Vector3(mid, neg - 0.3f, pos), ARROW_COLOR),
+			new CustomVertex.PositionColored(new Vector3(mid, neg - 0.5f, mid), ARROW_COLOR),
+			new CustomVertex.PositionColored(new Vector3(mid, neg - 0.3f, neg), ARROW_COLOR),
+		};
 
 		public CustomVertex.PositionColoredTextured[] BOX = new[] {
-																new CustomVertex.PositionColoredTextured(neg, neg, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //top left top
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right top
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left top
+			new CustomVertex.PositionColoredTextured(neg, neg, pos, ALPHACOLOR, 0, 0), //top left top
+			new CustomVertex.PositionColoredTextured(pos, neg, pos, ALPHACOLOR, 1, 0), //top right top
+			new CustomVertex.PositionColoredTextured(neg, pos, pos, ALPHACOLOR, 0, 1), //bottom left top
 
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left top
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right top
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, pos,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //bottom right top
-
-
-                                                                /*
-				new CustomVertex.PositionColoredTextured(neg, neg, neg, BOXCOLOR, 0,0), //top left bottom
-				new CustomVertex.PositionColoredTextured(neg, pos, neg, BOXCOLOR, 0,1), //bottom left bottom
-				new CustomVertex.PositionColoredTextured(pos, neg, neg, BOXCOLOR, 1,0), //top right bottom
+			new CustomVertex.PositionColoredTextured(neg, pos, pos, ALPHACOLOR, 0, 1), //bottom left top
+			new CustomVertex.PositionColoredTextured(pos, neg, pos, ALPHACOLOR, 1, 0), //top right top
+			new CustomVertex.PositionColoredTextured(pos, pos, pos, ALPHACOLOR, 1, 1), //bottom right top
+			/*
+			new CustomVertex.PositionColoredTextured(neg, neg, neg, BOXCOLOR, 0,0), //top left bottom
+			new CustomVertex.PositionColoredTextured(neg, pos, neg, BOXCOLOR, 0,1), //bottom left bottom
+			new CustomVertex.PositionColoredTextured(pos, neg, neg, BOXCOLOR, 1,0), //top right bottom
 				
-				new CustomVertex.PositionColoredTextured(neg, pos, neg, BOXCOLOR, 0,1), //bottom left bottom
-				new CustomVertex.PositionColoredTextured(pos, pos, neg, BOXCOLOR, 1,1), //bottom right bottom
-				new CustomVertex.PositionColoredTextured(pos, neg, neg, BOXCOLOR, 1,0), //top right bottom
-				*/
+			new CustomVertex.PositionColoredTextured(neg, pos, neg, BOXCOLOR, 0,1), //bottom left bottom
+			new CustomVertex.PositionColoredTextured(pos, pos, neg, BOXCOLOR, 1,1), //bottom right bottom
+			new CustomVertex.PositionColoredTextured(pos, neg, neg, BOXCOLOR, 1,0), //top right bottom
+			*/
+			new CustomVertex.PositionColoredTextured(pos, neg, neg, ALPHACOLOR, 1, 1), //top left sideR
+			new CustomVertex.PositionColoredTextured(pos, pos, neg, ALPHACOLOR, 0, 1), //bottom left sideR
+			new CustomVertex.PositionColoredTextured(pos, neg, pos, ALPHACOLOR, 1, 0), //top right sideR
 
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top left sideR
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left sideR
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right sideR
-				
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left sideR
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom right sideR
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right sideR
+			new CustomVertex.PositionColoredTextured(pos, pos, neg, ALPHACOLOR, 0, 1), //bottom left sideR
+			new CustomVertex.PositionColoredTextured(pos, pos, pos, ALPHACOLOR, 0, 0), //bottom right sideR
+			new CustomVertex.PositionColoredTextured(pos, neg, pos, ALPHACOLOR, 1, 0), //top right sideR
 
 
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top left sideL
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right sidel
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left sideL
+			new CustomVertex.PositionColoredTextured(neg, neg, neg, ALPHACOLOR, 1, 1), //top left sideL
+			new CustomVertex.PositionColoredTextured(neg, neg, pos, ALPHACOLOR, 1, 0), //top right sidel
+			new CustomVertex.PositionColoredTextured(neg, pos, neg, ALPHACOLOR, 0, 1), //bottom left sideL
 
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //bottom left sideL
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //top right sideL
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom right sideL
+			new CustomVertex.PositionColoredTextured(neg, pos, neg, ALPHACOLOR, 0, 1), //bottom left sideL
+			new CustomVertex.PositionColoredTextured(neg, neg, pos, ALPHACOLOR, 1, 0), //top right sideL
+			new CustomVertex.PositionColoredTextured(neg, pos, pos, ALPHACOLOR, 0, 0), //bottom right sideL
 
 
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //top left front
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom left front
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top right front
-				
-                                                                new CustomVertex.PositionColoredTextured(neg, pos, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom left front
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //bottom right front
-                                                                new CustomVertex.PositionColoredTextured(pos, pos, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top right front	
+			new CustomVertex.PositionColoredTextured(neg, pos, neg, ALPHACOLOR, 0, 1), //top left front
+			new CustomVertex.PositionColoredTextured(neg, pos, pos, ALPHACOLOR, 0, 0), //bottom left front
+			new CustomVertex.PositionColoredTextured(pos, pos, neg, ALPHACOLOR, 1, 1), //top right front
+
+			new CustomVertex.PositionColoredTextured(neg, pos, pos, ALPHACOLOR, 0, 0), //bottom left front
+			new CustomVertex.PositionColoredTextured(pos, pos, pos, ALPHACOLOR, 1, 0), //bottom right front
+			new CustomVertex.PositionColoredTextured(pos, pos, neg, ALPHACOLOR, 1, 1), //top right front	
 
 
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, neg,
-																										 ALPHACOLOR, 0,
-																										 1),
-                                                                //top left back
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top right back
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom left back
+			new CustomVertex.PositionColoredTextured(neg, neg, neg, ALPHACOLOR, 0, 1), //top left back
+			new CustomVertex.PositionColoredTextured(pos, neg, neg, ALPHACOLOR, 1, 1), //top right back
+			new CustomVertex.PositionColoredTextured(neg, neg, pos, ALPHACOLOR, 0, 0), //bottom left back
 
-                                                                new CustomVertex.PositionColoredTextured(neg, neg, pos,
-																										 ALPHACOLOR, 0,
-																										 0),
-                                                                //bottom left back
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, neg,
-																										 ALPHACOLOR, 1,
-																										 1),
-                                                                //top right back
-                                                                new CustomVertex.PositionColoredTextured(pos, neg, pos,
-																										 ALPHACOLOR, 1,
-																										 0),
-                                                                //bottom right back
-                                                              };
+			new CustomVertex.PositionColoredTextured(neg, neg, pos, ALPHACOLOR, 0, 0), //bottom left back
+			new CustomVertex.PositionColoredTextured(pos, neg, neg, ALPHACOLOR, 1, 1), //top right back
+			new CustomVertex.PositionColoredTextured(pos, neg, pos, ALPHACOLOR, 1, 0), //bottom right back
+		};
 
 		#endregion
 
@@ -236,6 +140,8 @@ namespace HMapEdit
 			base.OnPaint(pe);
 		}
 
+		private Surface _nifObjectIdSurface;
+		private float[] _nifObjectIdScreen;
 		public void Initialize()
 		{
 			Caps hardware = Manager.GetDeviceCaps(0, DeviceType.Hardware);
@@ -249,17 +155,15 @@ namespace HMapEdit
 			//if (hardware.DeviceCaps.SupportsPureDevice)
 			//    flags |= CreateFlags.PureDevice;
 
-			DEVICE = new Device(0, DeviceType.Hardware, this, flags | CreateFlags.MultiThreaded, GetPP());
+			var pp = GetPP();
+			DEVICE = new Device(0, DeviceType.Hardware, this, flags | CreateFlags.MultiThreaded, pp);
 			DEVICE.DeviceReset += delegate
 			{
 				DEVICE.RenderState.Lighting = false;
 				DEVICE.RenderState.CullMode = Cull.None;
 				DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-				DEVICE.RenderState.AntiAliasedLineEnable = true;
+				DEVICE.RenderState.AntiAliasedLineEnable = false;
 				DEVICE.RenderState.PointSize = 3.0f;
-
-				if (Program.Arguments.AntiAlias)
-					DEVICE.RenderState.MultiSampleAntiAlias = true;
 
 				//Alpha
 				DEVICE.RenderState.SourceBlend = Blend.SourceAlpha;
@@ -273,6 +177,15 @@ namespace HMapEdit
 				//                                          DEVICE.TextureState[0].AlphaArgument1 = TextureArgument.AlphaReplicate;
 				DEVICE.TextureState[0].AlphaOperation = TextureOperation.SelectArg1;
 				DEVICE.TextureState[0].AlphaArgument1 = TextureArgument.TextureColor;
+
+				if (_nifObjectIdSurface != null)
+				{
+					DEVICE.SetRenderTarget(1, null);
+					_nifObjectIdSurface.Dispose();
+				}
+				_nifObjectIdSurface = DEVICE.CreateRenderTarget(pp.BackBufferWidth, pp.BackBufferHeight, Format.R32F, MultiSampleType.None, 0, true);
+				_nifObjectIdScreen = new float[pp.BackBufferWidth * pp.BackBufferHeight];
+				DEVICE.SetRenderTarget(1, _nifObjectIdSurface);
 			};
 			POLYGON = Mesh.Sphere(DEVICE, 256f, 4, 2);
 			CURSOR = Mesh.Cylinder(DEVICE, 128.0f, 0.0f, 256f, 6, 2);
@@ -298,7 +211,6 @@ namespace HMapEdit
 			var blue = new Bitmap(1, 1);
 			blue.SetPixel(0, 0, Color.Blue);
 			BLUE = new Texture(DEVICE, blue, Usage.None, Pool.Managed);
-			LocalTextures.Set("__BLUE__", BLUE);
 
 			var yellow = new Bitmap(1, 1);
 			yellow.SetPixel(0, 0, Color.Yellow);
@@ -324,7 +236,9 @@ namespace HMapEdit
 			//alph.SetPixel(0, 0, Color.FromArgb(160, Color.White));
 			alph.SetPixel(0, 0, Color.WhiteSmoke);
 			OBJSOLID = new Texture(DEVICE, alph, Usage.None, Pool.Managed);
-			LocalTextures.Set("__OBJSOLID__", OBJSOLID);
+			localTextures = new LocalTextures(DEVICE, OBJSOLID);
+			localTextures.Set("__OBJSOLID__", OBJSOLID);
+			localTextures.Set("__BLUE__", BLUE);
 
 			var hc = new Bitmap(1, 1);
 			hc.SetPixel(0, 0, Color.White);
@@ -369,26 +283,15 @@ namespace HMapEdit
 			pp.BackBufferHeight = Height;
 			pp.BackBufferWidth = Width;
 
-			if (Program.Arguments.AntiAlias)
-			{
-				int res, h;
-				if (!Manager.CheckDeviceMultiSampleType(0, DeviceType.Hardware, f, true, MultiSampleType.NonMaskable, out res, out h))
-					Program.Arguments.AntiAlias = false;
-				else
-				{
-					pp.MultiSample = MultiSampleType.NonMaskable;
-					pp.MultiSampleQuality = Math.Min(2, h - 1);
-				}
-			}
-
 			return pp;
 		}
 
 		public void Deinitialize()
 		{
+			_nifObjectIdSurface.Dispose();
+			_nifObjectIdSurface = null;
 			SHADER_NIF.Dispose();
 			SHADER.Dispose();
-			Environment.Exit(0); //clean..!
 			DEVICE.Dispose();
 			DEVICE = null;
 		}
@@ -532,7 +435,7 @@ namespace HMapEdit
 
 							var hasModel = f.NIF.Model != null;
 							var solid = hasModel && Program.CONFIG.Objects.ShowModelSolid && !f.WireFrame;
-							var wire = hasModel && (f.WireFrame || Program.CONFIG.Objects.ShowModelWire || f == Program.FORM.CurrentFixture);
+							var wire = hasModel && (f.WireFrame || Program.CONFIG.Objects.ShowModelWire);
 							var bb = !hasModel || Program.CONFIG.Objects.AlwaysShowBounding;
 
 							if (solid && !wire && Program.CONFIG.Objects.AlwaysWireframe)
@@ -574,21 +477,17 @@ namespace HMapEdit
 						{
 							var world = GetFixtureMatrix(t.f, false);
 							DEVICE.Transform.World = world;
-							t.f.NIF.Model.Render(DEVICE, SHADER_NIF, ref world);
+							SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
+							t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
 						}
 
 						foreach (var t in fixtures.Where(f => f.wire))
 						{
-							Texture col = t.f == Program.FORM.CurrentFixture ? Program.FORM.renderControl1.BLUE : null;
-							if (col != null)
-							{
-								DEVICE.SetTexture(0, col);
-								DEVICE.SetTexture(1, col);
-							}
+							SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
 							DEVICE.RenderState.FillMode = FillMode.WireFrame;
 							var world = GetFixtureMatrix(t.f, false);
 							DEVICE.Transform.World = world;
-							t.f.NIF.Model.Render(DEVICE, SHADER_NIF, ref world);
+							t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
 							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
 						}
 						SHADER_NIF.End();
@@ -994,14 +893,32 @@ namespace HMapEdit
 
 				#endregion
 
-				#region Cursor
+				#region Cursor & Selection
+
+				if (Program.FORM.CurrentFixture != null)
+				{
+					var fixture = Program.FORM.CurrentFixture;
+
+					SHADER_NIF.Begin(FX.None);
+					SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
+					SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
+					
+					SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), fixture.ID);
+					SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), new Vector4(1, 0.8f, 0, 0.5f));
+					DEVICE.RenderState.FillMode = FillMode.WireFrame;
+					var world = GetFixtureMatrix(fixture, false);
+					DEVICE.Transform.World = world;
+					fixture.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
+					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+
+					SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), Vector4.Empty);
+					SHADER_NIF.End();
+				}
 
 				if (Program.CONFIG.ShowCursor)
 				{
 					float dist = CAMERA_DIST / 5000 / 3;
-					DEVICE.Transform.World = Matrix.Scaling(dist, dist, dist) *
-											 Matrix.Translation(Program.FORM.lastMapPos.X, Program.FORM.lastMapPos.Y,
-																Program.FORM.lastMapPos.Z);
+					DEVICE.Transform.World = Matrix.Scaling(dist, dist, dist) * Matrix.Translation(Program.FORM.lastMapPos);
 					DEVICE.SetTexture(0, BLUE);
 					CURSOR.DrawSubset(0);
 					DEVICE.SetTexture(0, HC);
@@ -1066,6 +983,17 @@ namespace HMapEdit
 				DEVICE.EndScene();
 
 				DEVICE.Present();
+
+				unsafe
+				{
+					fixed (float* p = _nifObjectIdScreen)
+					{
+						var stream = _nifObjectIdSurface.LockRectangle(LockFlags.Discard, out int pitch);
+						for (int y = 0; y < DEVICE.Viewport.Height; y++)
+							Marshal.Copy(stream.InternalData + y * pitch, _nifObjectIdScreen, y * DEVICE.Viewport.Width, DEVICE.Viewport.Width);
+						_nifObjectIdSurface.UnlockRectangle();
+					}
+				}
 			}
 			fps = ((fps * 49 + 1000f / Watch.ElapsedMilliseconds) / 50f);
 			Watch.Stop();
@@ -1537,68 +1465,29 @@ namespace HMapEdit
 
 		public Objects.Fixture GetFixtureByClick(Point click)
 		{
-			var rayStart = new Vector3(click.X, click.Y, 0.0f); //y is our "far" plane
-			float intDist = 0;
-			Objects.Fixture poly = null;
+			var id = _nifObjectIdScreen[click.Y * DEVICE.Viewport.Width + click.X];
 
-			foreach (Objects.Fixture g in Objects.Fixtures)
+			if (false)
 			{
-				if (g.Hidden || g.WireFrame)
+				var pic = new PictureBox() { Dock = DockStyle.Fill };
+				var bmp = new Bitmap(DEVICE.Viewport.Width, DEVICE.Viewport.Height);
+				var lck = bmp.LockBits(new Rectangle(new Point(0, 0), bmp.Size), System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+				unsafe
 				{
-					///either hidden or locked
-					continue;
+					uint* ptr = (uint*)lck.Scan0.ToPointer();
+					for (int y = 0; y < DEVICE.Viewport.Height; y++)
+						for (int x = 0; x < DEVICE.Viewport.Width; x++)
+							ptr[y * (lck.Stride / sizeof(uint)) + x] = ((uint)_nifObjectIdScreen[y * DEVICE.Viewport.Width + x] & 0xFF) | 0xFF000000;
 				}
+				bmp.UnlockBits(lck);
 
-				Matrix world = GetFixtureMatrix(g, true);
-
-				rayStart.Z = 0.0f;
-				Vector3 uRayNear =
-				  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-									DEVICE.Transform.View, world);
-
-				rayStart.Z = 1.0f;
-				Vector3 uRayFar =
-				  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-									DEVICE.Transform.View, world);
-
-				Vector3 rayDir = Vector3.Subtract(uRayFar, uRayNear);
-
-				IntersectInformation info = new IntersectInformation() { Dist = float.MaxValue };
-				if (g != Program.FORM.CurrentFixture /*&& OBJECT.Intersect(uRayNear, rayDir, out info)*/)
-				{ /* check collision with bounding */
-					bool meshHit = false;
-					if ((g.NIF.Model == null || Program.CONFIG.Objects.AlwaysShowBounding) && OBJECT.Intersect(uRayNear, rayDir, out info))
-					{
-						//no mesh, so we assume its hit.
-						meshHit = true;
-					}
-					else if (g.NIF.Model != null)
-					{
-						world = GetFixtureMatrix(g, false);
-
-						rayStart.Z = 0.0f;
-						uRayNear =
-						  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-											DEVICE.Transform.View, world);
-
-						rayStart.Z = 1.0f;
-						uRayFar =
-						  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-											DEVICE.Transform.View, world);
-
-						rayDir = Vector3.Subtract(uRayFar, uRayNear);
-						if (g.NIF.Model.Intersect(uRayNear, rayDir)) meshHit = true;
-					}
-
-					if (meshHit && (poly == null || intDist > info.Dist))
-					{
-						intDist = info.Dist;
-						poly = g;
-					}
-				}
+				var form = new Form();
+				pic.Image = bmp;
+				form.Controls.Add(pic);
+				form.Show(this.FindForm());
 			}
 
-			return poly;
+			return Objects.Fixtures.Find(f => f.ID == id);
 		}
 
 		public Light GetLightByClick(Point click)

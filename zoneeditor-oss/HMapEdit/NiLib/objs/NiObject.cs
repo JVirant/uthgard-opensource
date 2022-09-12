@@ -20,6 +20,7 @@ namespace MNL
 		}
 
 		public virtual void DxInit(Device device) { }
+		public virtual void DxDeinit() { }
 		public virtual void Render(Device device) { }
 	}
 }

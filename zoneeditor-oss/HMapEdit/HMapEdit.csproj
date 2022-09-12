@@ -77,11 +77,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Forms\NIFRenderControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Forms\NIFRenderControl.Designer.cs">
+      <DependentUpon>NIFRenderControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\NIFViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\NIFViewer.Designer.cs">
+      <DependentUpon>NIFViewer.cs</DependentUpon>
+    </Compile>
     <Compile Include="NiLib\Ni2Obj.cs" />
     <Compile Include="NiLib\objs\NiShadeProperty.cs" />
+    <Compile Include="Tools\Camera.cs" />
     <Compile Include="Tools\CommandLine.cs" />
     <Compile Include="Tools\CommandLineFlags.cs" />
     <Compile Include="Tools\Extensions.cs" />
+    <Compile Include="Tools\MultimediaTimer.cs" />
     <Compile Include="Tools\WavefrontObjFile.cs" />
     <Compile Include="Engine\PatchMap.cs" />
     <Compile Include="Engine\SoundMgr.cs" />
@@ -334,6 +348,12 @@
     <EmbeddedResource Include="Forms\NIFForm.resx">
       <SubType>Designer</SubType>
       <DependentUpon>NIFForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\NIFRenderControl.resx">
+      <DependentUpon>NIFRenderControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\NIFViewer.resx">
+      <DependentUpon>NIFViewer.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\ScriptConsole.resx">
       <DependentUpon>ScriptConsole.cs</DependentUpon>

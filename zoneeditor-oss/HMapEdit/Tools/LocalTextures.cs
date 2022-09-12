@@ -9,11 +9,19 @@ namespace HMapEdit
 	/// <summary>
 	/// Local (zone) Textures
 	/// </summary>
-	public static class LocalTextures
+	public class LocalTextures
 	{
-		private static readonly Dictionary<string, Texture> m_Textures = new Dictionary<string, Texture>();
+		public readonly Device Device;
+		private readonly Texture _objsolid;
+		private readonly Dictionary<string, Texture> m_Textures = new Dictionary<string, Texture>();
 
-		public static void Set(string file, Texture texture)
+		public LocalTextures(Device device, Texture objsolid)
+		{
+			Device = device;
+			_objsolid = objsolid;
+		}
+
+		public void Set(string file, Texture texture)
 		{
 			if (m_Textures.ContainsKey(file))
 				return;
@@ -25,12 +33,12 @@ namespace HMapEdit
 		/// </summary>
 		/// <param name="file"></param>
 		/// <returns></returns>
-		public static Texture Get(string file, bool noAlt, bool searchEverywhere = false)
+		public Texture Get(string file, bool noAlt, bool searchEverywhere = false)
 		{
 			if (file == "empty")
 				return null; //simply.. nothing
 			if (string.IsNullOrEmpty(file))
-				return noAlt ? null : Program.FORM.renderControl1.OBJSOLID;
+				return noAlt ? null : _objsolid;
 
 			string n = Path.GetFileName(file).ToLower();
 
@@ -46,9 +54,9 @@ namespace HMapEdit
 					Console.WriteLine("Loading Texture " + f);
 					Texture t;
 					if (file.Contains("patch"))
-						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f), 0, 0, 1, Usage.None, Format.A8R8G8B8, Pool.Managed, Filter.Box, Filter.Box, 0);
+						t = TextureLoader.FromStream(Device, GameData.Open(f), 0, 0, 1, Usage.None, Format.A8R8G8B8, Pool.Managed, Filter.Box, Filter.Box, 0);
 					else
-						t = TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, GameData.Open(f));
+						t = TextureLoader.FromStream(Device, GameData.Open(f));
 					m_Textures.Add(n, t);
 					return m_Textures[n]; //loaded
 				}
@@ -58,15 +66,15 @@ namespace HMapEdit
 					var (stream, path) = GameData.FindTex(file);
 					if (stream != null)
 					{
-						m_Textures.Add(n, TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, stream));
+						m_Textures.Add(n, TextureLoader.FromStream(Device, stream));
 						return m_Textures[n]; //loaded
 					}
-					if (file.EndsWith(".tga"))
+					if (file.ToLower().EndsWith(".tga") || file.ToLower().EndsWith(".nif")) // there is one texture ending with nif (a bug ?!)
 					{
 						var (stream2, _) = GameData.FindTex(file.Substring(0, file.Length - 3) + "dds");
 						if (stream2 != null)
 						{
-							m_Textures.Add(n, TextureLoader.FromStream(Program.FORM.renderControl1.DEVICE, stream2));
+							m_Textures.Add(n, TextureLoader.FromStream(Device, stream2));
 							return m_Textures[n]; //loaded
 						}
 					}
@@ -74,7 +82,7 @@ namespace HMapEdit
 						return null;
 				}
 
-				m_Textures.Add(n, Program.FORM.renderControl1.OBJSOLID);
+				m_Textures.Add(n, _objsolid);
 				Console.WriteLine("Missing Texture: " + file);
 			}
 
@@ -86,7 +94,7 @@ namespace HMapEdit
 		/// </summary>
 		/// <param name="t"></param>
 		/// <returns></returns>
-		public static string Get(Texture t)
+		public string Get(Texture t)
 		{
 			foreach (KeyValuePair<string, Texture> kv in m_Textures)
 			{
@@ -100,7 +108,7 @@ namespace HMapEdit
 		/// <summary>
 		/// Clears all textures
 		/// </summary>
-		public static void Clear()
+		public void Clear()
 		{
 			m_Textures.Clear();
 		}

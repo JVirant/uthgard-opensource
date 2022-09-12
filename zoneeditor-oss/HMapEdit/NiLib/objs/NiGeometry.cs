@@ -70,6 +70,14 @@ namespace MNL
 			if (SkinInstance.IsValid())
 				SkinInstance.Object.DxInit(device);
 		}
+		public override void DxDeinit()
+		{
+			base.DxDeinit();
+			if (Data.IsValid())
+				Data.Object.DxDeinit();
+			if (SkinInstance.IsValid())
+				SkinInstance.Object.DxDeinit();
+		}
 		public override void Render(Device device)
 		{
 			base.Render(device);
