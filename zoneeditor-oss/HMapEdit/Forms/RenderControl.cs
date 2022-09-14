@@ -313,8 +313,8 @@ namespace HMapEdit
 					ADCounter = Math.Min(Math.Max(50, ADCounter), 150);
 				}
 
-				SurfaceDescription s = DEVICE.GetRenderTarget(0).Description;
 
+				var s = DEVICE.GetRenderTarget(0).Description;
 				var vp = new Viewport();
 				vp.Width = s.Width;
 				vp.Height = s.Height;
@@ -328,657 +328,23 @@ namespace HMapEdit
 
 				DEVICE.BeginScene();
 
-				#region Camera
-
-				bool ortho = Program.FORM.ortho || Program.MODE == Program.eMode.SoundEdit;
-
-				var cam = new Vector3();
-
-				if (ortho)
-				{
-					CAMERA_ROT_SIDE = 0; //no rots on ortho
-					CAMERA_ROT_HEIGHT = (float)Math.PI / 2 - 0.01f;
-				}
-
-				var c = (float)(Math.Cos(CAMERA_ROT_HEIGHT) * CAMERA_DIST); //teilstück von dist
-
-				cam.X = (float)(CAMERA_TARGET.X + (Math.Sin(CAMERA_ROT_SIDE) * c));
-				cam.Y = (float)(CAMERA_TARGET.Y + (Math.Cos(CAMERA_ROT_SIDE) * c));
-
-				if (!ortho) cam.Z = (float)(CAMERA_TARGET.Z + (Math.Sin(CAMERA_ROT_HEIGHT) * CAMERA_DIST));
-				else cam.Z = CAMERA_TARGET.Z + 10000;
-
-				CAMERA = cam;
-
-				float nearp = 100.0f;
-				float farp = Program.CONFIG.Clipping;
-
-				if (!ortho)
-				{
-					if (CAMERA_DIST < 4096) farp = 8192 * 2;
-					if (CAMERA_DIST < 2048)
-						farp = 8192 * 1;
-					if (CAMERA_DIST < 1024)
-						farp = 8192 * 0.5f;
-					if (CAMERA_DIST < 512)
-						farp = 8192 * 0.25f;
-
-					DEVICE.Transform.Projection =
-					  Matrix.PerspectiveFovLH((float)Math.PI / 4, (float)s.Width / s.Height, nearp, farp);
-				}
-				else
-				{
-					float fl = CAMERA_DIST / 100;
-					DEVICE.Transform.Projection = Matrix.OrthoLH(s.Width * fl, s.Height * fl, 0.00000001f, 6500000f);
-				}
-
-				DEVICE.Transform.View = Matrix.LookAtLH(cam, CAMERA_TARGET, new Vector3(0, 0, 1));
-
-				#endregion
-
-				#region Heightmap
-
-				if (Program.ZONE != null && Program.CONFIG.ShowHeightmap)
-				{
-					DEVICE.SetTexture(0, Program.ZONE.TextureMap);
-					bool usePM = Program.CONFIG.UsePatchmaps;
-
-					for (int a = 0; a < 8; a++)
-					{
-						for (int b = 0; b < 8; b++)
-						{
-							Mesh m = SUBZONES[a, b];
-
-							if (m == null) continue;
-
-							DEVICE.Transform.World = GetSubMatrix(a, b);
-
-							if (usePM)
-								PatchMap.Render(a, b, SUBZONES[a, b]);
-							else if (Program.ZONE.TextureMap != null)
-								SUBZONES[a, b].DrawSubset(0);
-
-							if (Program.MODE == Program.eMode.Heightmap || Program.MODE == Program.eMode.Smooth)
-							{
-								if (Program.CONFIG.FillMode != FillMode.WireFrame)
-								{
-									DEVICE.RenderState.FillMode = FillMode.WireFrame;
-									DEVICE.SetTexture(0, HC);
-									SUBZONES[a, b].DrawSubset(0);
-
-									DEVICE.SetTexture(0, Program.ZONE.TextureMap);
-									DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-								}
-							}
-						}
-					}
-				}
-
-				#endregion
-
-				#region Objects
-
-				if (Program.CONFIG.ShowObjects)
-				{
-					lock (Objects.Fixtures)
-					{
-						var fixtures = new List<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
-						foreach (Objects.Fixture f in Objects.Fixtures)
-						{
-							var dist = (float)Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
-
-							if (ortho)
-								dist *= 2;
-
-							if (f.Hidden || dist > farp)
-								continue;
-
-							var hasModel = f.NIF.Model != null;
-							var solid = hasModel && Program.CONFIG.Objects.ShowModelSolid && !f.WireFrame;
-							var wire = hasModel && (f.WireFrame || Program.CONFIG.Objects.ShowModelWire);
-							var bb = !hasModel || Program.CONFIG.Objects.AlwaysShowBounding;
-
-							if (solid && !wire && Program.CONFIG.Objects.AlwaysWireframe)
-							{
-								solid = false;
-								wire = true;
-							}
-
-							if (Program.CONFIG.AdaptiveDegeneration)
-							{
-								int fac = 1;
-
-								if (ortho)
-									fac = 2;
-
-								var far = Program.CONFIG.ObjectRenderDistance * ADCounter * fac / 100;
-								var middle = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
-								var near = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
-
-								if (dist > far)
-									continue;
-								if (dist > middle)
-								{
-									solid = false;
-									wire = false;
-									bb = true;
-								}
-							}
-
-							fixtures.Add((f, dist, hasModel, solid, wire, bb));
-						}
-
-						fixtures.Sort(new Comparison<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>((a, b) => (int)((b.distance - a.distance) * 10)));
-
-						SHADER_NIF.Begin(FX.None);
-						SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
-						SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
-						foreach (var t in fixtures.Where(f => f.solid))
-						{
-							var world = GetFixtureMatrix(t.f, false);
-							DEVICE.Transform.World = world;
-							SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
-							t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
-						}
-
-						foreach (var t in fixtures.Where(f => f.wire))
-						{
-							SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
-							DEVICE.RenderState.FillMode = FillMode.WireFrame;
-							var world = GetFixtureMatrix(t.f, false);
-							DEVICE.Transform.World = world;
-							t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
-							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-						}
-						SHADER_NIF.End();
-
-						foreach (var t in fixtures.Where(f => f.bb)) //bounding box
-						{
-							DEVICE.Transform.World = GetFixtureMatrix(t.f, true);
-							DEVICE.SetTexture(0, (t.f == Program.FORM.CurrentFixture ? BLUE : null));
-							//DEVICE.VertexFormat = CustomVertex.PositionColoredTextured.Format;
-
-							DEVICE.RenderState.FillMode = FillMode.WireFrame;
-							//Cull prev = DEVICE.RenderState.CullMode;
-							//DEVICE.RenderState.CullMode = Cull.Clockwise; //needed because of alpha
-							//DEVICE.DrawUserPrimitives(PrimitiveType.TriangleList, BOX.Length/3, BOX);
-							_BOX.DrawSubset(0);
-							//DEVICE.RenderState.CullMode = prev;
-							DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-
-							//DEVICE.SetTexture(0, null);
-							//DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-							//DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 3, ARROW);
-						}
-					}
-				}
-
-				#endregion
-
-				#region Lights
-
-				lock (Light.Lights)
-				{
-					foreach (Light l in Light.Lights)
-					{
-						switch (l.Color)
-						{
-							default:
-								DEVICE.SetTexture(0, YELLOW);
-								break;
-							case LightColor.White:
-								DEVICE.SetTexture(0, HC);
-								break;
-							case LightColor.GreenWhite:
-								DEVICE.SetTexture(0, GREEN);
-								break;
-							case LightColor.GreenYellow:
-								DEVICE.SetTexture(0, GREEN);
-								break;
-							case LightColor.OrangeWhite:
-								DEVICE.SetTexture(0, ORANGE);
-								break;
-							case LightColor.OrangeYellow:
-								DEVICE.SetTexture(0, ORANGE);
-								break;
-							case LightColor.BlueWhite:
-								DEVICE.SetTexture(0, BLUE);
-								break;
-							case LightColor.RedWhite:
-								DEVICE.SetTexture(0, RED);
-								break;
-							case LightColor.TurqoiseWhite:
-								DEVICE.SetTexture(0, BLUE);
-								break;
-							case LightColor.VioletWhite:
-								DEVICE.SetTexture(0, VIOLETT);
-								break;
-							case LightColor.Yellow:
-								DEVICE.SetTexture(0, YELLOW);
-								break;
-						}
-
-						DEVICE.Transform.World = GetLightMatrix(l);
-
-						if (Program.MODE == Program.eMode.Lights)
-						{
-							LIGHT.DrawSubset(0);
-							DEVICE.SetTexture(0, null);
-						}
-						DEVICE.RenderState.FillMode = FillMode.WireFrame;
-						LIGHT.DrawSubset(0);
-						DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-					}
-				}
-
-				#endregion
-
-				#region Filled Polygons
-
-				if (Program.CONFIG.ShowFilledPolygons)
-				{
-					//Settings
-					DEVICE.Transform.World = Matrix.Identity;
-					DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-
-					#region Water
-
-					lock (Polygon.Polygons)
-					{
-						DEVICE.SetTexture(0, null);
-
-						Cull prev = DEVICE.RenderState.CullMode;
-						DEVICE.RenderState.CullMode = Cull.None;
-
-						foreach (Polygon p in Polygon.Polygons)
-						{
-							if (p.Type == ePolygon.Water)
-							{
-								var tri = new CustomVertex.PositionColored[p.Points.Count];
-								int index = 0;
-
-								int al = Color.FromArgb(128, p.Color).ToArgb();
-
-								foreach (Vector2 vec in p.Points)
-								{
-									float x = vec.X;
-									float y = vec.Y;
-									float z = p.WHeight;
-
-									tri[index] = new CustomVertex.PositionColored(x, y, z, al);
-									index++;
-								}
-
-								if (tri.Length > 2)
-									DEVICE.DrawUserPrimitives(PrimitiveType.TriangleStrip, tri.Length - 2, tri);
-							}
-						}
-
-						DEVICE.RenderState.CullMode = prev;
-					}
-
-					#endregion
-
-					#region Zonejump
-
-					{
-						DEVICE.SetTexture(0, YELLOW);
-
-						Cull prev = DEVICE.RenderState.CullMode;
-						DEVICE.RenderState.CullMode = Cull.CounterClockwise;
-
-						lock (Zonejump.Zonejumps)
-						{
-							foreach (Zonejump j in Zonejump.Zonejumps)
-							{
-								var tri = new CustomVertex.PositionColored[4];
-
-								tri[0] = new CustomVertex.PositionColored(j.First, ALPHACOLOR); //top left
-								tri[1] = new CustomVertex.PositionColored(new Vector3(j.Second.X, j.Second.Y, j.First.Z), ALPHACOLOR); //top right
-								tri[2] = new CustomVertex.PositionColored(new Vector3(j.First.X, j.First.Y, j.Second.Z), ALPHACOLOR); //bottom left
-								tri[3] = new CustomVertex.PositionColored(j.Second, ALPHACOLOR); //bottom right
-
-								DEVICE.DrawUserPrimitives(PrimitiveType.TriangleStrip, 2, tri);
-							}
-						}
-
-						DEVICE.RenderState.CullMode = prev;
-					}
-
-					#endregion
-				}
-
-				#endregion
-
-				#region Grid
-
-				if (GRID != null && Program.CONFIG.ShowGrid)
-				{
-					DEVICE.SetTexture(0, null);
-					DEVICE.RenderState.FillMode = FillMode.WireFrame;
-					DEVICE.Transform.World = GetGridMatrix();
-					GRID.DrawSubset(0);
-					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-				}
-
-				#endregion
+				var (ortho, farPlane) = _updateCamera();
+
+				_renderHeightmap();
+				_renderObjects(ortho, farPlane);
+				_renderLights();
+				_renderFilledPolygons();
+				_renderGrid();
 
 				//Reset device to 2D Settings
 				DEVICE.Clear(ClearFlags.ZBuffer, Color.Empty, 1.0f, 0);
 
-				#region Sounds
-
-				if (Program.MODE == Program.eMode.SoundEdit && SoundMgr.CurrentRegion != null)
-				{
-					SHADER.Begin(FX.None);
-
-
-					for (int i = 1; i <= 2; i++)
-					{
-						var col = new float[4];
-
-						foreach (Shape sh in (i == 1 ? SoundMgr.CurrentRegion.Shapes : SoundMgr.CurrentRegion.xShapes))
-						{
-							if (SoundMgr.CurrentShape == sh) col = new float[4] { 0, 0, 1, 0.25f };
-							else if (i == 1) col = new float[4] { 1, 0, 0, 0.25f };
-							else if (i == 2) col = new float[4] { 0, 1, 0, 0.25f };
-
-							SHADER.SetValue(EffectHandle.FromString("color"), col);
-							SHADER.BeginPass(0); //colorize
-							Matrix mat;
-							Mesh mesh = GetShapeData(sh, out mat);
-							DEVICE.Transform.World = mat;
-							mesh.DrawSubset(0);
-							SHADER.EndPass();
-						}
-					}
-					SHADER.End();
-				}
-
-				#endregion
-
-				#region Polygons
-
-				if (Program.CONFIG.ShowPolygons)
-				{
-					float dist = CAMERA_DIST / 5000 / 4;
-
-					if (ortho)
-						dist *= 5;
-
-					dist = Math.Min(dist, 1);
-					Matrix sc = Matrix.Scaling(dist, dist, dist);
-
-					lock (Polygon.Polygons)
-					{
-						foreach (Polygon p in Polygon.Polygons)
-						{
-							lock (p.Points)
-							{
-								int color = p.Color.ToArgb();
-
-								if (p.Type == ePolygon.None || p.Type == ePolygon.Bounding)
-								{
-									//Create 3D Vectors
-									var vecs = new CustomVertex.PositionColored[p.Points.Count];
-									int index = 0;
-
-									foreach (Vector2 vec in p.Points)
-									{
-										float x = vec.X;
-										float y = vec.Y;
-										float z = GetPolygonZ(p, vec);
-
-										vecs[index++] = new CustomVertex.PositionColored(x, y, z, color);
-
-										//Draw 'Dot'
-										DEVICE.Transform.World = sc * Matrix.Translation(x, y, z);
-
-										if (Program.FORM.m_CurrentPolygon == p && Program.FORM.m_CurrentPolyIndex == (index - 1))
-											DEVICE.SetTexture(0, YELLOW);
-										else DEVICE.SetTexture(0, (index == 1 ? BLUE : RED));
-										POLYGON.DrawSubset(0);
-
-										DEVICE.RenderState.FillMode = FillMode.WireFrame;
-										DEVICE.SetTexture(0, HC);
-										POLYGON.DrawSubset(0);
-										DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-									}
-
-									//Add last
-									//vecs[index] = vecs[0];
-
-									//Draw Lines
-									DEVICE.SetTexture(0, null);
-									DEVICE.Transform.World = Matrix.Identity;
-									DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-									DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, vecs.Length - 1, vecs);
-
-									if (p.Type == ePolygon.Bounding && p.Points.Count > 1)
-									{
-										var arr = new CustomVertex.PositionColored[(vecs.Length - 1) * 2];
-										for (int i = 0; i < vecs.Length - 1; i++)
-										{
-											CustomVertex.PositionColored v1 = vecs[i];
-											CustomVertex.PositionColored v2 = vecs[i + 1];
-
-											float middleX = (v1.X + v2.X) / 2;
-											float middleY = (v1.Y + v2.Y) / 2;
-											float middleZ = (v1.Z + v2.Z) / 2;
-
-											float relX = v2.X - v1.X;
-											float relY = v2.Y - v1.Y;
-
-											float steigungBound = (relY) / (relX);
-											float steigungPfeil = (-1f) / steigungBound;
-
-
-											float pdist = 128;
-											bool inv = false;
-
-											if (relY >= 0) inv = true;
-
-											if (inv)
-												pdist = -pdist;
-
-											float velUn = steigungPfeil * pdist;
-											float velLim = Math.Max(Math.Min(velUn, Math.Abs(pdist)), -Math.Abs(pdist));
-
-											float targetX = middleX + pdist * (Math.Abs(velLim) / Math.Abs(velUn));
-											float targetY = middleY + velLim;
-
-											int pcol = (Color.Orange).ToArgb();
-
-											arr[i * 2] = new CustomVertex.PositionColored(middleX, middleY, middleZ, pcol);
-											arr[i * 2 + 1] = new CustomVertex.PositionColored(targetX, targetY, middleZ, pcol);
-										}
-										DEVICE.DrawUserPrimitives(PrimitiveType.LineList, arr.Length / 2, arr);
-									}
-								}
-								if (p.Type == ePolygon.Water)
-								{
-									var left = new CustomVertex.PositionColored[p.Points.Count / 2];
-									var right = new CustomVertex.PositionColored[p.Points.Count / 2];
-									int index = 0;
-									int total = 0;
-									int num = 0;
-
-									foreach (Vector2 vec in p.Points)
-									{
-										float x = vec.X;
-										float y = vec.Y;
-										float z = GetPolygonZ(p, vec);
-
-										if (index < p.Points.Count / 2)
-										{
-											if (num % 2 == 0) left[index] = new CustomVertex.PositionColored(x, y, z, color);
-											else right[index] = new CustomVertex.PositionColored(x, y, z, color);
-										}
-
-										//Draw 'Dot'
-										DEVICE.Transform.World = sc * Matrix.Translation(x, y, z);
-
-										num++;
-
-										if (Program.FORM.m_CurrentPolygon == p && Program.FORM.m_CurrentPolyIndex == total)
-											DEVICE.SetTexture(0, YELLOW);
-										else if (index == 0) DEVICE.SetTexture(0, BLUE);
-										else DEVICE.SetTexture(0, (num % 2 == 0 ? GREEN : DARKGREEN));
-										POLYGON.DrawSubset(0);
-
-										DEVICE.RenderState.FillMode = FillMode.WireFrame;
-										DEVICE.SetTexture(0, HC);
-										POLYGON.DrawSubset(0);
-										DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-
-										if (num % 2 == 0) index++;
-
-										total++;
-									}
-
-									//Draw Lines
-
-									DEVICE.SetTexture(0, null);
-									DEVICE.Transform.World = Matrix.Identity;
-									DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-									if (left.Length > 1)
-										DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, left.Length - 1, left);
-									if (right.Length > 1)
-										DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, right.Length - 1, right);
-								}
-							}
-						}
-					}
-				}
-
-				#endregion
-
-				#region Zonejump
-
-				if (Program.CONFIG.ShowZonejumps)
-				{
-					Matrix nodeScale = Matrix.Scaling(0.1f, 0.1f, 0.1f);
-
-					foreach (Zonejump j in Zonejump.Zonejumps)
-					{
-						var lines = new CustomVertex.PositionColored[6];
-
-						Vector3 topleft = j.First;
-						var topright = new Vector3(j.Second.X, j.Second.Y, j.First.Z);
-						var bottomleft = new Vector3(j.First.X, j.First.Y, j.Second.Z);
-						Vector3 bottomright = j.Second;
-
-						lines[0] = new CustomVertex.PositionColored(topleft, Color.Orange.ToArgb());
-						lines[1] = new CustomVertex.PositionColored(topright, Color.Orange.ToArgb());
-						lines[2] = new CustomVertex.PositionColored(bottomright, Color.Orange.ToArgb());
-						lines[3] = new CustomVertex.PositionColored(bottomleft, Color.Orange.ToArgb());
-						lines[4] = lines[0];
-						lines[5] = lines[2];
-
-						//Draw Nodes
-						DEVICE.SetTexture(0, (Program.FORM.m_CurrentZonejump == j && j.EditIndex == 1 ? YELLOW : ORANGE));
-						DEVICE.Transform.World = nodeScale * Matrix.Translation(j.First);
-						POLYGON.DrawSubset(0);
-						DEVICE.SetTexture(0, (Program.FORM.m_CurrentZonejump == j && j.EditIndex == 2 ? YELLOW : ORANGE));
-						DEVICE.Transform.World = nodeScale * Matrix.Translation(j.Second);
-						POLYGON.DrawSubset(0);
-
-						//Draw Lines
-						DEVICE.SetTexture(0, null);
-						DEVICE.Transform.World = Matrix.Identity;
-						DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-						DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, 5, lines);
-					}
-				}
-
-				#endregion
-
-				#region Cursor & Selection
-
-				if (Program.FORM.CurrentFixture != null)
-				{
-					var fixture = Program.FORM.CurrentFixture;
-
-					SHADER_NIF.Begin(FX.None);
-					SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
-					SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
-					
-					SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), fixture.ID);
-					SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), new Vector4(1, 0.8f, 0, 0.5f));
-					DEVICE.RenderState.FillMode = FillMode.WireFrame;
-					var world = GetFixtureMatrix(fixture, false);
-					DEVICE.Transform.World = world;
-					fixture.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
-					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-
-					SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), Vector4.Empty);
-					SHADER_NIF.End();
-				}
-
-				if (Program.CONFIG.ShowCursor)
-				{
-					float dist = CAMERA_DIST / 5000 / 3;
-					DEVICE.Transform.World = Matrix.Scaling(dist, dist, dist) * Matrix.Translation(Program.FORM.lastMapPos);
-					DEVICE.SetTexture(0, BLUE);
-					CURSOR.DrawSubset(0);
-					DEVICE.SetTexture(0, HC);
-
-					DEVICE.RenderState.FillMode = FillMode.WireFrame;
-					CURSOR.DrawSubset(0);
-					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
-				}
-
-				#endregion
-
-				#region Ruler
-
-				if (Program.MODE == Program.eMode.Ruler)
-				{
-					//Draw Line
-					DEVICE.SetTexture(0, null);
-					DEVICE.Transform.World = Matrix.Identity;
-
-					var l = new CustomVertex.PositionColored[10];
-
-					const int xsize = 96;
-
-					l[0] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(-xsize, -xsize, 0),
-													   Color.Red.ToArgb());
-					l[1] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(+xsize, +xsize, 0),
-													   Color.Red.ToArgb());
-
-					l[2] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(-xsize, +xsize, 0),
-													   Color.Red.ToArgb());
-					l[3] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(+xsize, -xsize, 0),
-													   Color.Red.ToArgb());
-
-					l[4] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(-xsize, -xsize, 0),
-													   Color.Red.ToArgb());
-					l[5] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(+xsize, +xsize, 0),
-													   Color.Red.ToArgb());
-
-					l[6] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(-xsize, +xsize, 0),
-													   Color.Red.ToArgb());
-					l[7] =
-					  new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(+xsize, -xsize, 0),
-													   Color.Red.ToArgb());
-
-					l[8] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source, Color.Red.ToArgb());
-					l[9] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination, Color.Red.ToArgb());
-
-
-					DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
-					DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 5, l);
-				}
-
-				#endregion
+				_renderSoundPolygons();
+				_renderPolygons(ortho);
+				_renderZoneJumps();
+				_renderSelection();
+				_renderCursor();
+				_renderRuler();
 
 				DEVICE.EndScene();
 
@@ -999,6 +365,640 @@ namespace HMapEdit
 			Watch.Stop();
 			Watch.Reset();
 		}
+
+
+		private (bool ortho, float farPlane) _updateCamera()
+		{
+			var ortho = Program.FORM.ortho || Program.MODE == Program.eMode.SoundEdit;
+
+			var cam = new Vector3();
+
+			if (ortho)
+			{
+				CAMERA_ROT_SIDE = 0; //no rots on ortho
+				CAMERA_ROT_HEIGHT = (float)Math.PI / 2 - 0.01f;
+			}
+
+			var c = (float)(Math.Cos(CAMERA_ROT_HEIGHT) * CAMERA_DIST); //teilstück von dist
+
+			cam.X = (float)(CAMERA_TARGET.X + (Math.Sin(CAMERA_ROT_SIDE) * c));
+			cam.Y = (float)(CAMERA_TARGET.Y + (Math.Cos(CAMERA_ROT_SIDE) * c));
+
+			if (!ortho)
+				cam.Z = (float)(CAMERA_TARGET.Z + (Math.Sin(CAMERA_ROT_HEIGHT) * CAMERA_DIST));
+			else
+				cam.Z = CAMERA_TARGET.Z + 10000;
+
+			CAMERA = cam;
+			var s = DEVICE.GetRenderTarget(0).Description;
+
+			float nearp = 100.0f;
+			float farp = Program.CONFIG.Clipping;
+
+			if (!ortho)
+			{
+				if (CAMERA_DIST < 4096)
+					farp = 8192 * 2;
+				if (CAMERA_DIST < 2048)
+					farp = 8192 * 1;
+				if (CAMERA_DIST < 1024)
+					farp = 8192 * 0.5f;
+				if (CAMERA_DIST < 512)
+					farp = 8192 * 0.25f;
+
+				DEVICE.Transform.Projection =
+				  Matrix.PerspectiveFovLH((float)Math.PI / 4, (float)s.Width / s.Height, nearp, farp);
+			}
+			else
+			{
+				float fl = CAMERA_DIST / 100;
+				DEVICE.Transform.Projection = Matrix.OrthoLH(s.Width * fl, s.Height * fl, 0.00000001f, 6500000f);
+			}
+
+			DEVICE.Transform.View = Matrix.LookAtLH(cam, CAMERA_TARGET, new Vector3(0, 0, 1));
+
+			return (ortho, farp);
+		}
+
+		private void _renderHeightmap()
+		{
+			if (Program.ZONE != null && Program.CONFIG.ShowHeightmap)
+			{
+				DEVICE.SetTexture(0, Program.ZONE.TextureMap);
+				bool usePM = Program.CONFIG.UsePatchmaps;
+
+				for (int a = 0; a < 8; a++)
+				{
+					for (int b = 0; b < 8; b++)
+					{
+						Mesh m = SUBZONES[a, b];
+
+						if (m == null) continue;
+
+						DEVICE.Transform.World = GetSubMatrix(a, b);
+
+						if (usePM)
+							PatchMap.Render(a, b, SUBZONES[a, b]);
+						else if (Program.ZONE.TextureMap != null)
+							SUBZONES[a, b].DrawSubset(0);
+
+						if (Program.MODE == Program.eMode.Heightmap || Program.MODE == Program.eMode.Smooth)
+						{
+							if (Program.CONFIG.FillMode != FillMode.WireFrame)
+							{
+								DEVICE.RenderState.FillMode = FillMode.WireFrame;
+								DEVICE.SetTexture(0, HC);
+								SUBZONES[a, b].DrawSubset(0);
+
+								DEVICE.SetTexture(0, Program.ZONE.TextureMap);
+								DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		private void _renderObjects(bool ortho, float farPlane)
+		{
+			if (Program.CONFIG.ShowObjects)
+			{
+				lock (Objects.Fixtures)
+				{
+					var fixtures = new List<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>(Objects.Fixtures.Count);
+					foreach (Objects.Fixture f in Objects.Fixtures)
+					{
+						var dist = (float)Utils.GetDistance(new Vector3(f.X, f.Y, f.Z), CAMERA);
+
+						if (ortho)
+							dist *= 2;
+
+						if (f.Hidden || dist > farPlane)
+							continue;
+
+						var hasModel = f.NIF.Model != null;
+						var solid = hasModel && Program.CONFIG.Objects.ShowModelSolid && !f.WireFrame;
+						var wire = hasModel && (f.WireFrame || Program.CONFIG.Objects.ShowModelWire);
+						var bb = !hasModel || Program.CONFIG.Objects.AlwaysShowBounding;
+
+						if (solid && !wire && Program.CONFIG.Objects.AlwaysWireframe)
+						{
+							solid = false;
+							wire = true;
+						}
+
+						if (Program.CONFIG.AdaptiveDegeneration)
+						{
+							int fac = 1;
+
+							if (ortho)
+								fac = 2;
+
+							var far = Program.CONFIG.ObjectRenderDistance * ADCounter * fac / 100;
+							var middle = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
+							var near = Program.CONFIG.ObjectRenderDistance / 2 * ADCounter * fac / 100;
+
+							if (dist > far)
+								continue;
+							if (dist > middle)
+							{
+								solid = false;
+								wire = false;
+								bb = true;
+							}
+						}
+
+						fixtures.Add((f, dist, hasModel, solid, wire, bb));
+					}
+
+					fixtures.Sort(new Comparison<(Objects.Fixture f, float distance, bool hasModel, bool solid, bool wire, bool bb)>((a, b) => (int)((b.distance - a.distance) * 10)));
+
+					SHADER_NIF.Begin(FX.None);
+					SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
+					SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
+					foreach (var t in fixtures.Where(f => f.solid))
+					{
+						var world = GetFixtureMatrix(t.f, false);
+						DEVICE.Transform.World = world;
+						SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
+						t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
+					}
+
+					foreach (var t in fixtures.Where(f => f.wire))
+					{
+						SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), t.f.ID);
+						DEVICE.RenderState.FillMode = FillMode.WireFrame;
+						var world = GetFixtureMatrix(t.f, false);
+						DEVICE.Transform.World = world;
+						t.f.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
+						DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+					}
+					SHADER_NIF.End();
+
+					foreach (var t in fixtures.Where(f => f.bb)) //bounding box
+					{
+						DEVICE.Transform.World = GetFixtureMatrix(t.f, true);
+						DEVICE.SetTexture(0, (t.f == Program.FORM.CurrentFixture ? BLUE : null));
+						//DEVICE.VertexFormat = CustomVertex.PositionColoredTextured.Format;
+
+						DEVICE.RenderState.FillMode = FillMode.WireFrame;
+						//Cull prev = DEVICE.RenderState.CullMode;
+						//DEVICE.RenderState.CullMode = Cull.Clockwise; //needed because of alpha
+						//DEVICE.DrawUserPrimitives(PrimitiveType.TriangleList, BOX.Length/3, BOX);
+						_BOX.DrawSubset(0);
+						//DEVICE.RenderState.CullMode = prev;
+						DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+
+						//DEVICE.SetTexture(0, null);
+						//DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+						//DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 3, ARROW);
+					}
+				}
+			}
+		}
+
+		private void _renderLights()
+		{
+
+			lock (Light.Lights)
+			{
+				foreach (Light l in Light.Lights)
+				{
+					switch (l.Color)
+					{
+						default:
+							DEVICE.SetTexture(0, YELLOW);
+							break;
+						case LightColor.White:
+							DEVICE.SetTexture(0, HC);
+							break;
+						case LightColor.GreenWhite:
+							DEVICE.SetTexture(0, GREEN);
+							break;
+						case LightColor.GreenYellow:
+							DEVICE.SetTexture(0, GREEN);
+							break;
+						case LightColor.OrangeWhite:
+							DEVICE.SetTexture(0, ORANGE);
+							break;
+						case LightColor.OrangeYellow:
+							DEVICE.SetTexture(0, ORANGE);
+							break;
+						case LightColor.BlueWhite:
+							DEVICE.SetTexture(0, BLUE);
+							break;
+						case LightColor.RedWhite:
+							DEVICE.SetTexture(0, RED);
+							break;
+						case LightColor.TurqoiseWhite:
+							DEVICE.SetTexture(0, BLUE);
+							break;
+						case LightColor.VioletWhite:
+							DEVICE.SetTexture(0, VIOLETT);
+							break;
+						case LightColor.Yellow:
+							DEVICE.SetTexture(0, YELLOW);
+							break;
+					}
+
+					DEVICE.Transform.World = GetLightMatrix(l);
+
+					if (Program.MODE == Program.eMode.Lights)
+					{
+						LIGHT.DrawSubset(0);
+						DEVICE.SetTexture(0, null);
+					}
+					DEVICE.RenderState.FillMode = FillMode.WireFrame;
+					LIGHT.DrawSubset(0);
+					DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+				}
+			}
+
+		}
+
+		private void _renderFilledPolygons()
+		{
+			if (Program.CONFIG.ShowFilledPolygons)
+			{
+				//Settings
+				DEVICE.Transform.World = Matrix.Identity;
+				DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+
+				#region Water
+
+				lock (Polygon.Polygons)
+				{
+					DEVICE.SetTexture(0, null);
+
+					Cull prev = DEVICE.RenderState.CullMode;
+					DEVICE.RenderState.CullMode = Cull.None;
+
+					foreach (Polygon p in Polygon.Polygons)
+					{
+						if (p.Type == ePolygon.Water)
+						{
+							var tri = new CustomVertex.PositionColored[p.Points.Count];
+							int index = 0;
+
+							int al = Color.FromArgb(128, p.Color).ToArgb();
+
+							foreach (Vector2 vec in p.Points)
+							{
+								float x = vec.X;
+								float y = vec.Y;
+								float z = p.WHeight;
+
+								tri[index] = new CustomVertex.PositionColored(x, y, z, al);
+								index++;
+							}
+
+							if (tri.Length > 2)
+								DEVICE.DrawUserPrimitives(PrimitiveType.TriangleStrip, tri.Length - 2, tri);
+						}
+					}
+
+					DEVICE.RenderState.CullMode = prev;
+				}
+
+				#endregion
+
+				#region Zonejump
+
+				{
+					DEVICE.SetTexture(0, YELLOW);
+
+					Cull prev = DEVICE.RenderState.CullMode;
+					DEVICE.RenderState.CullMode = Cull.CounterClockwise;
+
+					lock (Zonejump.Zonejumps)
+					{
+						foreach (Zonejump j in Zonejump.Zonejumps)
+						{
+							var tri = new CustomVertex.PositionColored[4];
+
+							tri[0] = new CustomVertex.PositionColored(j.First, ALPHACOLOR); //top left
+							tri[1] = new CustomVertex.PositionColored(new Vector3(j.Second.X, j.Second.Y, j.First.Z), ALPHACOLOR); //top right
+							tri[2] = new CustomVertex.PositionColored(new Vector3(j.First.X, j.First.Y, j.Second.Z), ALPHACOLOR); //bottom left
+							tri[3] = new CustomVertex.PositionColored(j.Second, ALPHACOLOR); //bottom right
+
+							DEVICE.DrawUserPrimitives(PrimitiveType.TriangleStrip, 2, tri);
+						}
+					}
+
+					DEVICE.RenderState.CullMode = prev;
+				}
+
+				#endregion
+			}
+		}
+
+		private void _renderGrid()
+		{
+			if (GRID != null && Program.CONFIG.ShowGrid)
+			{
+				DEVICE.SetTexture(0, null);
+				DEVICE.RenderState.FillMode = FillMode.WireFrame;
+				DEVICE.Transform.World = GetGridMatrix();
+				GRID.DrawSubset(0);
+				DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+			}
+		}
+
+		private void _renderSoundPolygons()
+		{
+			if (Program.MODE == Program.eMode.SoundEdit && SoundMgr.CurrentRegion != null)
+			{
+				SHADER.Begin(FX.None);
+
+				for (int i = 1; i <= 2; i++)
+				{
+					var col = new float[4];
+
+					foreach (Shape sh in (i == 1 ? SoundMgr.CurrentRegion.Shapes : SoundMgr.CurrentRegion.xShapes))
+					{
+						if (SoundMgr.CurrentShape == sh) col = new float[4] { 0, 0, 1, 0.25f };
+						else if (i == 1) col = new float[4] { 1, 0, 0, 0.25f };
+						else if (i == 2) col = new float[4] { 0, 1, 0, 0.25f };
+
+						SHADER.SetValue(EffectHandle.FromString("color"), col);
+						SHADER.BeginPass(0); //colorize
+						Matrix mat;
+						Mesh mesh = GetShapeData(sh, out mat);
+						DEVICE.Transform.World = mat;
+						mesh.DrawSubset(0);
+						SHADER.EndPass();
+					}
+				}
+				SHADER.End();
+			}
+		}
+
+		private void _renderPolygons(bool ortho)
+		{
+			if (Program.CONFIG.ShowPolygons)
+			{
+				float dist = CAMERA_DIST / 5000 / 4;
+
+				if (ortho)
+					dist *= 5;
+
+				dist = Math.Min(dist, 1);
+				Matrix sc = Matrix.Scaling(dist, dist, dist);
+
+				lock (Polygon.Polygons)
+				{
+					foreach (Polygon p in Polygon.Polygons)
+					{
+						lock (p.Points)
+						{
+							int color = p.Color.ToArgb();
+
+							if (p.Type == ePolygon.None || p.Type == ePolygon.Bounding)
+							{
+								//Create 3D Vectors
+								var vecs = new CustomVertex.PositionColored[p.Points.Count];
+								int index = 0;
+
+								foreach (Vector2 vec in p.Points)
+								{
+									float x = vec.X;
+									float y = vec.Y;
+									float z = GetPolygonZ(p, vec);
+
+									vecs[index++] = new CustomVertex.PositionColored(x, y, z, color);
+
+									//Draw 'Dot'
+									DEVICE.Transform.World = sc * Matrix.Translation(x, y, z);
+
+									if (Program.FORM.m_CurrentPolygon == p && Program.FORM.m_CurrentPolyIndex == (index - 1))
+										DEVICE.SetTexture(0, YELLOW);
+									else DEVICE.SetTexture(0, (index == 1 ? BLUE : RED));
+									POLYGON.DrawSubset(0);
+
+									DEVICE.RenderState.FillMode = FillMode.WireFrame;
+									DEVICE.SetTexture(0, HC);
+									POLYGON.DrawSubset(0);
+									DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+								}
+
+								//Add last
+								//vecs[index] = vecs[0];
+
+								//Draw Lines
+								DEVICE.SetTexture(0, null);
+								DEVICE.Transform.World = Matrix.Identity;
+								DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+								DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, vecs.Length - 1, vecs);
+
+								if (p.Type == ePolygon.Bounding && p.Points.Count > 1)
+								{
+									var arr = new CustomVertex.PositionColored[(vecs.Length - 1) * 2];
+									for (int i = 0; i < vecs.Length - 1; i++)
+									{
+										CustomVertex.PositionColored v1 = vecs[i];
+										CustomVertex.PositionColored v2 = vecs[i + 1];
+
+										float middleX = (v1.X + v2.X) / 2;
+										float middleY = (v1.Y + v2.Y) / 2;
+										float middleZ = (v1.Z + v2.Z) / 2;
+
+										float relX = v2.X - v1.X;
+										float relY = v2.Y - v1.Y;
+
+										float steigungBound = (relY) / (relX);
+										float steigungPfeil = (-1f) / steigungBound;
+
+
+										float pdist = 128;
+										bool inv = false;
+
+										if (relY >= 0) inv = true;
+
+										if (inv)
+											pdist = -pdist;
+
+										float velUn = steigungPfeil * pdist;
+										float velLim = Math.Max(Math.Min(velUn, Math.Abs(pdist)), -Math.Abs(pdist));
+
+										float targetX = middleX + pdist * (Math.Abs(velLim) / Math.Abs(velUn));
+										float targetY = middleY + velLim;
+
+										int pcol = (Color.Orange).ToArgb();
+
+										arr[i * 2] = new CustomVertex.PositionColored(middleX, middleY, middleZ, pcol);
+										arr[i * 2 + 1] = new CustomVertex.PositionColored(targetX, targetY, middleZ, pcol);
+									}
+									DEVICE.DrawUserPrimitives(PrimitiveType.LineList, arr.Length / 2, arr);
+								}
+							}
+							if (p.Type == ePolygon.Water)
+							{
+								var left = new CustomVertex.PositionColored[p.Points.Count / 2];
+								var right = new CustomVertex.PositionColored[p.Points.Count / 2];
+								int index = 0;
+								int total = 0;
+								int num = 0;
+
+								foreach (Vector2 vec in p.Points)
+								{
+									float x = vec.X;
+									float y = vec.Y;
+									float z = GetPolygonZ(p, vec);
+
+									if (index < p.Points.Count / 2)
+									{
+										if (num % 2 == 0) left[index] = new CustomVertex.PositionColored(x, y, z, color);
+										else right[index] = new CustomVertex.PositionColored(x, y, z, color);
+									}
+
+									//Draw 'Dot'
+									DEVICE.Transform.World = sc * Matrix.Translation(x, y, z);
+
+									num++;
+
+									if (Program.FORM.m_CurrentPolygon == p && Program.FORM.m_CurrentPolyIndex == total)
+										DEVICE.SetTexture(0, YELLOW);
+									else if (index == 0) DEVICE.SetTexture(0, BLUE);
+									else DEVICE.SetTexture(0, (num % 2 == 0 ? GREEN : DARKGREEN));
+									POLYGON.DrawSubset(0);
+
+									DEVICE.RenderState.FillMode = FillMode.WireFrame;
+									DEVICE.SetTexture(0, HC);
+									POLYGON.DrawSubset(0);
+									DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+
+									if (num % 2 == 0) index++;
+
+									total++;
+								}
+
+								//Draw Lines
+
+								DEVICE.SetTexture(0, null);
+								DEVICE.Transform.World = Matrix.Identity;
+								DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+								if (left.Length > 1)
+									DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, left.Length - 1, left);
+								if (right.Length > 1)
+									DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, right.Length - 1, right);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		private void _renderZoneJumps()
+		{
+			if (Program.CONFIG.ShowZonejumps)
+			{
+				Matrix nodeScale = Matrix.Scaling(0.1f, 0.1f, 0.1f);
+
+				foreach (Zonejump j in Zonejump.Zonejumps)
+				{
+					var lines = new CustomVertex.PositionColored[6];
+
+					Vector3 topleft = j.First;
+					var topright = new Vector3(j.Second.X, j.Second.Y, j.First.Z);
+					var bottomleft = new Vector3(j.First.X, j.First.Y, j.Second.Z);
+					Vector3 bottomright = j.Second;
+
+					lines[0] = new CustomVertex.PositionColored(topleft, Color.Orange.ToArgb());
+					lines[1] = new CustomVertex.PositionColored(topright, Color.Orange.ToArgb());
+					lines[2] = new CustomVertex.PositionColored(bottomright, Color.Orange.ToArgb());
+					lines[3] = new CustomVertex.PositionColored(bottomleft, Color.Orange.ToArgb());
+					lines[4] = lines[0];
+					lines[5] = lines[2];
+
+					//Draw Nodes
+					DEVICE.SetTexture(0, (Program.FORM.m_CurrentZonejump == j && j.EditIndex == 1 ? YELLOW : ORANGE));
+					DEVICE.Transform.World = nodeScale * Matrix.Translation(j.First);
+					POLYGON.DrawSubset(0);
+					DEVICE.SetTexture(0, (Program.FORM.m_CurrentZonejump == j && j.EditIndex == 2 ? YELLOW : ORANGE));
+					DEVICE.Transform.World = nodeScale * Matrix.Translation(j.Second);
+					POLYGON.DrawSubset(0);
+
+					//Draw Lines
+					DEVICE.SetTexture(0, null);
+					DEVICE.Transform.World = Matrix.Identity;
+					DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+					DEVICE.DrawUserPrimitives(PrimitiveType.LineStrip, 5, lines);
+				}
+			}
+		}
+
+		private void _renderSelection()
+		{
+			if (Program.FORM.CurrentFixture != null)
+			{
+				var fixture = Program.FORM.CurrentFixture;
+
+				SHADER_NIF.Begin(FX.None);
+				SHADER_NIF.SetValue(EffectHandle.FromString("View"), DEVICE.Transform.View);
+				SHADER_NIF.SetValue(EffectHandle.FromString("Projection"), DEVICE.Transform.Projection);
+
+				SHADER_NIF.SetValue(EffectHandle.FromString("ObjectId"), fixture.ID);
+				SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), new Vector4(1, 0.8f, 0, 0.5f));
+				DEVICE.RenderState.FillMode = FillMode.WireFrame;
+				var world = GetFixtureMatrix(fixture, false);
+				DEVICE.Transform.World = world;
+				fixture.NIF.Model.Render(localTextures, SHADER_NIF, ref world);
+				DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+
+				SHADER_NIF.SetValue(EffectHandle.FromString("objectColor"), Vector4.Empty);
+				SHADER_NIF.End();
+			}
+		}
+
+		private void _renderCursor()
+		{
+			if (Program.CONFIG.ShowCursor)
+			{
+				float dist = CAMERA_DIST / 5000 / 3;
+				DEVICE.Transform.World = Matrix.Scaling(dist, dist, dist) * Matrix.Translation(Program.FORM.lastMapPos);
+				DEVICE.SetTexture(0, BLUE);
+				CURSOR.DrawSubset(0);
+				DEVICE.SetTexture(0, HC);
+
+				DEVICE.RenderState.FillMode = FillMode.WireFrame;
+				CURSOR.DrawSubset(0);
+				DEVICE.RenderState.FillMode = Program.CONFIG.FillMode;
+			}
+		}
+
+		private void _renderRuler()
+		{
+			if (Program.MODE == Program.eMode.Ruler)
+			{
+				//Draw Line
+				DEVICE.SetTexture(0, null);
+				DEVICE.Transform.World = Matrix.Identity;
+
+				var l = new CustomVertex.PositionColored[10];
+
+				const int xsize = 96;
+
+				l[0] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(-xsize, -xsize, 0), Color.Red.ToArgb());
+				l[1] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(+xsize, +xsize, 0), Color.Red.ToArgb());
+
+				l[2] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(-xsize, +xsize, 0), Color.Red.ToArgb());
+				l[3] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source + new Vector3(+xsize, -xsize, 0), Color.Red.ToArgb());
+
+				l[4] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(-xsize, -xsize, 0), Color.Red.ToArgb());
+				l[5] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(+xsize, +xsize, 0), Color.Red.ToArgb());
+
+				l[6] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(-xsize, +xsize, 0), Color.Red.ToArgb());
+				l[7] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination + new Vector3(+xsize, -xsize, 0), Color.Red.ToArgb());
+
+				l[8] = new CustomVertex.PositionColored(Program.TOOL_RULER.Source, Color.Red.ToArgb());
+				l[9] = new CustomVertex.PositionColored(Program.TOOL_RULER.Destination, Color.Red.ToArgb());
+
+
+				DEVICE.VertexFormat = CustomVertex.PositionColored.Format;
+				DEVICE.DrawUserPrimitives(PrimitiveType.LineList, 5, l);
+			}
+		}
+
 
 		public void CreateZone()
 		{
@@ -1283,14 +1283,10 @@ namespace HMapEdit
 			if (sub == null) return Vector3.Empty;
 
 			rayStart.Z = 0.0f;
-			Vector3 uRayNear =
-			  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-								DEVICE.Transform.View, GetGridMatrix());
+			Vector3 uRayNear = Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection, DEVICE.Transform.View, GetGridMatrix());
 
 			rayStart.Z = 1.0f;
-			Vector3 uRayFar =
-			  Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection,
-								DEVICE.Transform.View, GetGridMatrix());
+			Vector3 uRayFar = Vector3.Unproject(rayStart, DEVICE.Viewport, DEVICE.Transform.Projection, DEVICE.Transform.View, GetGridMatrix());
 
 			Vector3 rayDir = Vector3.Subtract(uRayFar, uRayNear);
 
@@ -1318,9 +1314,7 @@ namespace HMapEdit
 			x = (int)Math.Round(x / (float)q) * q;
 			y = (int)Math.Round(y / (float)q) * q;
 
-			return
-			  new Vector3(x, y,
-						  (Program.FORM.CurrentFixture == null ? CAMERA_TARGET.Z : Program.FORM.CurrentFixture.Z));
+			return new Vector3(x, y, (Program.FORM.CurrentFixture == null ? CAMERA_TARGET.Z : Program.FORM.CurrentFixture.Z));
 		}
 
 		public Vector3 GetRoundedVector(Vector3 exact)
@@ -1466,27 +1460,6 @@ namespace HMapEdit
 		public Objects.Fixture GetFixtureByClick(Point click)
 		{
 			var id = _nifObjectIdScreen[click.Y * DEVICE.Viewport.Width + click.X];
-
-			if (false)
-			{
-				var pic = new PictureBox() { Dock = DockStyle.Fill };
-				var bmp = new Bitmap(DEVICE.Viewport.Width, DEVICE.Viewport.Height);
-				var lck = bmp.LockBits(new Rectangle(new Point(0, 0), bmp.Size), System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
-				unsafe
-				{
-					uint* ptr = (uint*)lck.Scan0.ToPointer();
-					for (int y = 0; y < DEVICE.Viewport.Height; y++)
-						for (int x = 0; x < DEVICE.Viewport.Width; x++)
-							ptr[y * (lck.Stride / sizeof(uint)) + x] = ((uint)_nifObjectIdScreen[y * DEVICE.Viewport.Width + x] & 0xFF) | 0xFF000000;
-				}
-				bmp.UnlockBits(lck);
-
-				var form = new Form();
-				pic.Image = bmp;
-				form.Controls.Add(pic);
-				form.Show(this.FindForm());
-			}
-
 			return Objects.Fixtures.Find(f => f.ID == id);
 		}
 
