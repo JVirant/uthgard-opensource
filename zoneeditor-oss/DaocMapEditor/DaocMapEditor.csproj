@@ -1,0 +1,147 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\shortcuts.txt" />
+    <None Remove="scripts\CountObjects.txt" />
+    <None Remove="scripts\DeleteObjects.txt" />
+    <None Remove="scripts\empty.txt" />
+    <None Remove="scripts\FreezeObjects.txt" />
+    <None Remove="scripts\Help.txt" />
+    <None Remove="scripts\HideObjects.txt" />
+    <None Remove="scripts\MoveObjects.txt" />
+    <None Remove="scripts\RenderInfo.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\shortcuts.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\CountObjects.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\DeleteObjects.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\empty.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\FreezeObjects.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\Help.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\HideObjects.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\MoveObjects.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\RenderInfo.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vortice.Direct3D12" Version="3.2.0" />
+    <PackageReference Include="Vortice.DirectX" Version="3.2.0" />
+    <PackageReference Include="Vortice.Mathematics" Version="1.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Forms\AboutForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\CrashDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\InputForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\Loading.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\NIFForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\NIFRenderControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Forms\NIFViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\RenderControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Forms\ScriptConsole.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ScriptForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\SelectNIFDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\SoundForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\TexCtrl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Forms\TexForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Forms\AboutForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\CrashDialog.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\InputForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\Loading.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\MainForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\NIFForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\ScriptConsole.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\ScriptForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\SelectNIFDialog.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\SoundForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\TexCtrl.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Forms\TexForm.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

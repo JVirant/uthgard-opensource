@@ -13,3 +13,9 @@
 *.smod
 
 *.suo
+*.user
+
+.vs/
+obj/
+packages/
+bin/

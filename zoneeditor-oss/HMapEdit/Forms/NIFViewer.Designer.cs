@@ -51,6 +51,7 @@
 			this.nifList.Size = new System.Drawing.Size(257, 425);
 			this.nifList.TabIndex = 0;
 			this.nifList.UseCompatibleStateImageBehavior = false;
+			this.nifList.View = System.Windows.Forms.View.Details;
 			// 
 			// splitContainer1
 			// 

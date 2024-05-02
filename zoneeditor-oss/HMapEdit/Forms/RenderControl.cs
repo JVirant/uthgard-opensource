@@ -416,6 +416,7 @@ namespace HMapEdit
 			}
 
 			DEVICE.Transform.View = Matrix.LookAtLH(cam, CAMERA_TARGET, new Vector3(0, 0, 1));
+			SHADER_NIF.SetValue(EffectHandle.FromString("CameraPosition"), new Vector4(cam.X, cam.Y, cam.Z, 1.0f));
 
 			return (ortho, farp);
 		}

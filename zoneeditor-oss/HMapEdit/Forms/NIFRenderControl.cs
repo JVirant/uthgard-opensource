@@ -166,6 +166,7 @@ namespace HMapEdit.Forms
 			_shaderNif.Begin(FX.None);
 			_shaderNif.SetValue(EffectHandle.FromString("View"), _device.Transform.View);
 			_shaderNif.SetValue(EffectHandle.FromString("Projection"), _device.Transform.Projection);
+			_shaderNif.SetValue(EffectHandle.FromString("CameraPosition"), new Vector4(_camera.X, _camera.Y, _camera.Z, 1.0f));
 
 			var world = Matrix.Identity;
 			_device.Transform.World = world;

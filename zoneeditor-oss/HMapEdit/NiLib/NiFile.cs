@@ -252,6 +252,10 @@ namespace MNL
 		private static EffectHandle _handleBumpTexture = EffectHandle.FromString("BumpTexture");
 		private static EffectHandle _handleBumpTexUVSetIndex = EffectHandle.FromString("BumpTexUVSetIndex");
 
+		private static EffectHandle _handleHasGloss = EffectHandle.FromString("hasGloss");
+		private static EffectHandle _handleGlossTexture = EffectHandle.FromString("GlossTexture");
+		private static EffectHandle _handleGlossTexUVSetIndex = EffectHandle.FromString("GlossTexUVSetIndex");
+
 		private void _Render(LocalTextures localTextures, Effect effect, NiAVObject obj, Matrix modelMatrix, ref Vector3 position)
 		{
 			// TODO filter correctly
@@ -347,7 +351,13 @@ namespace MNL
 							effect.SetValue(_handleHasBump, false);
 
 						if (tex.GlossTexture?.Source != null && tex.GlossTexture.Source.IsValid())
-							Console.WriteLine("Gloss!");
+						{
+							tex.GlossTexture.Source.SetRef(this);
+							var texture = localTextures.Get(tex.GlossTexture.Source.Object.FileName.Value, true, true);
+							effect.SetValue(_handleGlossTexture, texture);
+							effect.SetValue(_handleGlossTexUVSetIndex, tex.GlossTexture.UVSetIndex);
+							effect.SetValue(_handleHasGloss, true);
+						}
 						if (tex.GlowTexture?.Source != null && tex.GlowTexture.Source.IsValid())
 							Console.WriteLine("Glow!");
 					}

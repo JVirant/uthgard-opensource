@@ -22,8 +22,10 @@ namespace HMapEdit.Forms
 			base.OnLoad(e);
 
 			nifList.SelectedIndexChanged += NifList_SelectedIndexChanged;
-			nifList.View = View.List;
-			nifList.Items.AddRange(Objects.NIFs.Values.Select(n => new ListViewItem(n.FileName)).ToArray());
+			nifList.Columns.Add(new ColumnHeader { Name = "FileName", Text = "File name" });
+			nifList.Columns.Add(new ColumnHeader { Name = "ID", Text = "ID" });
+			nifList.Columns.Add(new ColumnHeader { Name = "Group", Text = "Group" });
+			nifList.Items.AddRange(Objects.NIFs.Values.Select(n => new ListViewItem(new[] { n.FileName, n.ID.ToString(), n.Group })).ToArray());
 		}
 
 		private void NifList_SelectedIndexChanged(object sender, EventArgs e)
